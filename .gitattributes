@@ -1,0 +1,2 @@
+# Keep LF line endings everywhere (the project runs on Linux in Codespaces)
+* text=auto eol=lf
