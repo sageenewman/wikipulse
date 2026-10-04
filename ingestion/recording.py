@@ -27,6 +27,13 @@ from typing import IO, Literal
 from ingestion.sse import StreamMessage
 
 
+# Part files hold "<sort key><separator><recording line>". The key is the event
+# time in microseconds, zero-padded so that text order equals time order.
+_KEY_WIDTH = 20
+_SEPARATOR = chr(9)
+_NEWLINE = chr(10)
+
+
 def open_text(path: Path, mode: Literal["r", "w"]) -> IO[str]:
     if path.suffix == ".gz":
         return gzip.open(path, "rt" if mode == "r" else "wt", encoding="utf-8")
@@ -122,8 +129,8 @@ async def record(
                 # the event before it.
                 if produced is not None:
                     last_key[topic] = int(produced.timestamp() * 1_000_000)
-                parts[topic].write(f"{last_key.get(topic, 0):020d}	{encode(message)}
-")
+                key = f"{last_key.get(topic, 0):0{_KEY_WIDTH}d}"
+                parts[topic].write(key + _SEPARATOR + encode(message) + _NEWLINE)
                 count += 1
                 last_write = now
 
@@ -140,8 +147,6 @@ async def record(
         _merge_parts(parts_dir, path)
     return count
 
-
-_KEY_WIDTH = 20
 
 
 def _merge_parts(parts_dir: Path, path: Path) -> None:
