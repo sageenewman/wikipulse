@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 
 import httpx
@@ -21,19 +21,26 @@ class StreamMessage:
     """The event payload, exactly as received."""
 
 
-async def stream_events(settings: Settings) -> AsyncIterator[StreamMessage]:
+async def stream_events(
+    settings: Settings,
+    *,
+    start_event_id: str = "",
+    transport: httpx.AsyncBaseTransport | None = None,
+) -> AsyncGenerator[StreamMessage, None]:
     """Yield stream messages forever, reconnecting when the connection drops.
 
-    After a reconnect the stream resumes from the last message seen, so messages
-    can repeat around a reconnect but are not skipped (at-least-once). The resume
-    position lives in memory only: a process restart starts from "now".
+    Every (re)connect resumes from the last message seen, or from `start_event_id`
+    on the first connect. Wikimedia replays from that position, so messages can
+    repeat around a reconnect but are not skipped (at-least-once).
+
+    `transport` exists so tests can replace the network.
     """
-    last_event_id = ""
+    last_event_id = start_event_id
     delay = settings.reconnect_min_seconds
     timeout = httpx.Timeout(10.0, read=settings.stream_read_timeout_seconds)
     headers = {"User-Agent": settings.user_agent, "Accept": "text/event-stream"}
 
-    async with httpx.AsyncClient(timeout=timeout, headers=headers) as client:
+    async with httpx.AsyncClient(timeout=timeout, headers=headers, transport=transport) as client:
         while True:
             resume = {"Last-Event-ID": last_event_id} if last_event_id else {}
             try:

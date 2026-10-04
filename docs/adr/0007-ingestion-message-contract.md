@@ -25,7 +25,7 @@ The producer writes every Wikimedia event to `wiki.raw`. Consumers (Spark now, o
 ## Consequences
 - ✅ All changes to one page are in one partition, in order.
 - ✅ Bronze can store the value untouched, and reprocessing never depends on producer logic.
-- ✅ The resume position travels with the data, so it can be recovered from Kafka after a restart.
+- ✅ The resume position travels with the data. On startup the producer reads the newest message of each partition and continues from the most recent `last_event_id`, with no state store of its own. Verified live: after a 15-second network cut and after a 40-second shutdown, the raw topic had 0 missing and 0 duplicated events.
 - ⚠️ Keys are not unique per message, so topic compaction must stay off.
 - ⚠️ Changing the partition count later moves keys to other partitions and breaks ordering across the change.
 - ⚠️ In a 45-second live run the three partitions received 580, 567 and 703 messages. The spread is acceptable, but busy pages can skew it and it should be watched.

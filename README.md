@@ -34,6 +34,7 @@ Open the repo in GitHub Codespaces (**Code → Codespaces → Create codespace**
 ```bash
 make up      # start Redpanda and Redpanda Console, create the topics
 make ingest  # stream live Wikimedia events into the wiki.raw topic (Ctrl+C to stop)
+make check-gaps  # verify that no events were lost or duplicated
 make test    # run the tests
 make down    # stop everything
 ```

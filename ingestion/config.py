@@ -19,5 +19,9 @@ class Settings(BaseSettings):
     reconnect_min_seconds: float = 1.0
     reconnect_max_seconds: float = 60.0
 
+    # On startup, continue from the position of the last message written to Kafka.
+    # When false, or when the topics are empty, start from the live edge.
+    resume_on_start: bool = True
+
     stats_interval_seconds: float = 30.0
     log_level: str = "INFO"
