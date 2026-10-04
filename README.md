@@ -29,4 +29,14 @@ Kafka (Redpanda) · Spark Structured Streaming · Apache Iceberg · dbt · DuckD
 
 ## Quickstart
 
-_Coming soon. The project will open in GitHub Codespaces with one click._
+Open the repo in GitHub Codespaces (**Code → Codespaces → Create codespace**). The dev container installs the tooling. Then:
+
+```bash
+make up     # start Redpanda and Redpanda Console
+make ps     # check that services are healthy
+make down   # stop everything
+```
+
+Redpanda Console is served on port 8080. Run `make help` for all commands.
+
+The pipeline itself is still being built. See the [roadmap](docs/ROADMAP.md).

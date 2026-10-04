@@ -1,0 +1,22 @@
+{
+  "name": "wikipulse",
+  "image": "mcr.microsoft.com/devcontainers/python:1-3.12-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/sshd:1": {}
+  },
+  "hostRequirements": {
+    "cpus": 2,
+    "memory": "8gb"
+  },
+  "postCreateCommand": "pipx install uv && uv sync && cp -n .env.example .env",
+  "forwardPorts": [8080],
+  "portsAttributes": {
+    "8080": { "label": "Redpanda Console" }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-python.python", "charliermarsh.ruff", "ms-azuretools.vscode-docker"]
+    }
+  }
+}
