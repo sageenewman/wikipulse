@@ -32,6 +32,7 @@ Goal: Wikipedia events flowing into Redpanda reliably.
 - [ ] Validation: invalid events go to the DLQ, never crash the producer
 - [ ] Schema Registry: register the event schema (Avro or JSON Schema, decided in an ADR)
 - [ ] Recorder: save N minutes of live events to `data/samples/*.jsonl`
+- [ ] Record 24 hours and re-measure the numbers in [DATA_SOURCE.md](DATA_SOURCE.md)
 - [ ] Replay mode: produce from a sample file (with optional speed-up)
 - [ ] Prometheus metrics: events/sec, reconnects, DLQ count
 - [ ] Unit tests (parsing, validation) + integration test with Testcontainers
@@ -53,7 +54,8 @@ Goal: the system detects breaking news live and shows it on a dashboard.
 
 - [ ] Windowed aggregations: edits per page per 5 minutes (event time + watermark)
 - [ ] Spike scoring v1: z-score vs. a rolling baseline per page
-- [ ] Noise filters: bots, Wikidata, tiny edits (measure the impact of each)
+- [ ] Signal filter: `type in (edit, new)`, `namespace = 0`, non-bot, Wikipedia projects only (see [DATA_SOURCE.md](DATA_SOURCE.md))
+- [ ] Tune window size and thresholds on recorded data (the signal is only ~3 events/sec)
 - [ ] Emit spikes to the `wiki.alerts` topic + an Iceberg table
 - [ ] Streamlit dashboard: live trending, events/sec, bot vs. human, Hebrew Wikipedia view
 - [ ] Validate against real events: detection delay in minutes

@@ -22,6 +22,7 @@ Kafka (Redpanda) · Spark Structured Streaming · Apache Iceberg · dbt · DuckD
 ## Documentation
 
 - [Design document](docs/DESIGN.md)
+- [Data source notes](docs/DATA_SOURCE.md)
 - [Architecture decisions (ADRs)](docs/adr/)
 - [Roadmap](docs/ROADMAP.md)
 - [Contributing](CONTRIBUTING.md)

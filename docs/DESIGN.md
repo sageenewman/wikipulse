@@ -4,7 +4,7 @@
 
 ## 1. Summary
 
-When something happens in the world (an earthquake, a celebrity death, an election upset), people start editing the related Wikipedia article within minutes. Wikimedia publishes **every edit on every wiki in real time** as a public event stream: tens of events per second, millions per day.
+When something happens in the world (an earthquake, a celebrity death, an election upset), people start editing the related Wikipedia article within minutes. Wikimedia publishes **every change on every wiki in real time** as a public event stream: about 30 events per second, a few million per day. Findings from the real data are in [DATA_SOURCE.md](DATA_SOURCE.md).
 
 **WikiPulse** ingests that stream, lands it in an Iceberg lakehouse, and detects **abnormal spikes in edit activity** to surface breaking news as it happens. It also provides historical analytics and a live dashboard.
 
@@ -114,6 +114,8 @@ Detailed reasoning lives in [ADRs](adr/).
 
 ## 6. Spike detection v1
 
+Only human edits to Wikipedia articles are counted: `type in (edit, new)`, `namespace = 0`, `bot = false`, on a Wikipedia project. This is about 9% of the stream (see [DATA_SOURCE.md](DATA_SOURCE.md)).
+
 For each `(wiki, page_title)` and each 5-minute event-time window:
 
 ```
@@ -121,7 +123,6 @@ score = (edits_in_window - rolling_mean) / max(rolling_std, floor)
 alert if score > threshold AND edits_in_window >= min_edits AND distinct_editors >= min_editors
 ```
 
-- Exclude bot edits by default.
 - Requiring a minimum number of distinct editors filters out a single user making many small edits.
 - Start from defaults (threshold 4, min_edits 5, min_editors 3), then tune on replayed data.
 - **Success metric:** detection delay (minutes between the real-world event and the alert) for a set of known events.
