@@ -84,7 +84,59 @@ Sending a `Last-Event-ID` with a timestamp five minutes in the past returned 8,5
 
 **Adaptation:** the upstream offsets are a free loss detector. `make check-gaps` reads the raw topic and reports missing and duplicated offsets.
 
+### 12. Volume and size, measured on longer runs
+- A 10-minute live run carried 21,445 events: about 36 per second, or 3.1M per day. That is a little above the first one-minute sample.
+- A 10-minute recording (20,875 events) is 4.3MB gzipped, about 207 bytes per event. At that ratio a day of raw events is roughly 0.65GB compressed.
+- In 28,000+ live events, none failed validation and none were canary events.
+
+**Adaptation:** the 0.5GB/day estimate in ADR-0006 was close, and the retention values stay as they are. Redpanda's on-disk size could not be read from the file system, because it preallocates 32MiB per partition segment. Measure it through its metrics once monitoring exists.
+
+### 13. About seven days of history are available on request
+`?since=<ISO timestamp>` starts the stream in the past. Ten minutes of history arrived in five seconds. Asking for 30 days back returned events starting 7 days and 3 hours ago, so that is the retention of the busy upstream topic.
+
+**Adaptation:** `make record ARGS="--from <time> --to <time>"` records a past window. A news event can be captured up to a week after it happened.
+
+### 14. Two upstream topics, not merged by time
+The stream is fed by one topic per Wikimedia datacenter: `eqiad.mediawiki.recentchange` and `codfw.mediawiki.recentchange`. In a 15-hour recording, eqiad carried 2,655,517 events and codfw 103. When history is served, each topic arrives in time order, but the quiet topic runs days ahead of the busy one.
+
+**Adaptation:** the recorder writes one part file per upstream topic and merges them by event time. It stops only when every topic has passed the end of the window. Consumers must not assume the stream is globally ordered: within one topic, 2.3% of events were slightly out of order by `meta.dt`.
+
+### 15. Canary events are real
+Wikimedia emits a synthetic event every hour at minute 15 (`meta.domain = "canary"`), on the quiet topic. None appeared in the first live samples because they are rare.
+
+**Adaptation:** the producer drops them, as already implemented.
+
+### 16. What a real news event looks like
+Recorded: 2026-09-30, 09:00 to 24:00 UTC, the day of the Flydubai Flight 1073 hijacking attempt. 2,655,620 events (49 per second, on a weekday), 484MB gzipped.
+
+Human edits to the English article `Flydubai Flight 1073`, per hour:
+
+| Hour (UTC) | Edits | Editors |
+|---|---|---|
+| 11 (article created 11:42) | 1 | 1 |
+| 12 | 17 | 10 |
+| 13 | 14 | 9 |
+| 14 | 5 | 4 |
+| 15 | 7 | 3 |
+| 16 | 19 | 8 |
+| 17 | 14 | 10 |
+| 18 | 10 | 6 |
+| 19 | 13 | 9 |
+| 20 | 38 | 21 |
+| 21 | 14 | 6 |
+| 22 | 15 | 8 |
+| 23 | 3 | 2 |
+
+These counts match Wikipedia's own revision history for the article to within a few edits per hour.
+
+**Adaptation:**
+- The original rule (at least 5 edits in a 5-minute window) would probably have missed a world news event: the first full hour averaged 1.4 edits per 5 minutes. Windows need to be much longer (30 to 60 minutes), or thresholds lower.
+- The number of distinct editors looks like a stronger signal than the number of edits.
+- The article did not exist before the event, so there is no per-page baseline. A new page that quickly gathers many editors is itself the signal.
+- The event was spread over several titles: `Flydubai` (28 edits), and duplicates such as `Flydubai Flight FZ1073` and `2026 Flydubai plane hijack` that were created in parallel.
+- This recording is the first tuning and regression dataset for detection.
+
 ## Open questions
 - How do volume and the type mix change over 24 hours and during a major news event?
-- How far back does `Last-Event-ID` allow resuming? Five minutes works. The limit is not measured yet.
+- Is the busy/quiet split between the two upstream topics stable, or does it flip when Wikimedia switches datacenters?
 - Do `canary` test events (`meta.domain = "canary"`) appear? None in this sample. If they do, drop them at ingestion.

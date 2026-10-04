@@ -97,6 +97,31 @@ def test_first_connect_uses_the_stored_position() -> None:
     assert requests == ["pos-7"]
 
 
+def test_since_applies_only_until_a_position_is_known() -> None:
+    since_params: list[str | None] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        since_params.append(request.url.params.get("since"))
+        return sse_response((f"pos-{len(since_params)}", "a"))
+
+    settings = Settings.model_construct(reconnect_min_seconds=0.0, reconnect_max_seconds=0.0)
+
+    async def take() -> None:
+        stream = stream_events(
+            settings, since="2026-10-04T10:00:00Z", transport=httpx.MockTransport(handler)
+        )
+        count = 0
+        async for _ in stream:
+            count += 1
+            if count == 2:
+                break
+        await stream.aclose()
+
+    asyncio.run(take())
+
+    assert since_params == ["2026-10-04T10:00:00Z", None]
+
+
 def test_non_message_and_empty_events_are_ignored() -> None:
     body = b"event: ping\ndata: x\n\n:ok\n\n" + sse_body(("pos-1", "a"))
 

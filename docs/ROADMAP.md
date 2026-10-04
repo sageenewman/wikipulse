@@ -35,9 +35,14 @@ Goal: Wikipedia events flowing into Redpanda reliably.
 - [x] Validation: invalid events go to the DLQ, never crash the producer
 - [ ] Run the producer as a container in docker-compose
 - [ ] Schema Registry: register a JSON Schema for the raw events (messages stay raw JSON)
-- [ ] Recorder: save N minutes of live events to `data/samples/*.jsonl`
+- [x] Recorder: save the stream to a file, live or from a point in the past (`make record`)
+- [x] Replay mode: publish a recording to Kafka at the original pace, faster, or unpaced (`make replay`)
+- [x] Record a past time window (`--from`, `--to`), with upstream topics merged by event time
+- [x] Sample of deliberately broken events for exercising the dead-letter path
+- [x] First real-event recording: the Flydubai Flight 1073 day, 2026-09-30 (2.66M events)
+- [ ] Durable storage for large recordings (they are too big for git)
 - [ ] Record 24 hours and re-measure the numbers in [DATA_SOURCE.md](DATA_SOURCE.md)
-- [ ] Replay mode: produce from a sample file (with optional speed-up)
+- [ ] Load test with a recording of an hour or more (the first measurement lasted about a second)
 - [ ] Prometheus metrics: events/sec, reconnects, DLQ count
 - [x] Unit tests (validation, keying, routing)
 - [ ] Integration test with Testcontainers
@@ -53,13 +58,16 @@ Goal: events land in Iceberg, clean and deduplicated.
 - [ ] Wiki allowlist (`WIKI_ALLOWLIST`, starting with `enwiki`) applied in silver, never at ingestion
 - [ ] Partitioning strategy for silver (documented)
 - [ ] Query Iceberg from DuckDB to verify the data
+- [ ] Export a time window from bronze to a recording file
 - [ ] Tests for transformation functions
 
 ## Phase 3: Real-time detection + dashboard (MVP)
 Goal: the system detects breaking news live and shows it on a dashboard.
 
-- [ ] Windowed aggregations: edits per page per 5 minutes (event time + watermark)
+- [ ] Redesign the detection rule against the Flydubai recording: window length, thresholds, distinct editors, pages with no history (finding 16 in [DATA_SOURCE.md](DATA_SOURCE.md))
+- [ ] Windowed aggregations: edits and distinct editors per page (event time + watermark)
 - [ ] Spike scoring v1: z-score vs. a rolling baseline per page
+- [ ] Synthetic spike generator: inject a burst of edits into a quiet recording, for tests with a known answer
 - [ ] Signal filter: `type in (edit, new)`, `namespace = 0`, non-bot, Wikipedia projects only (see [DATA_SOURCE.md](DATA_SOURCE.md))
 - [ ] Tune window size and thresholds on recorded data (the signal is only ~3 events/sec)
 - [ ] Emit spikes to the `wiki.alerts` topic + an Iceberg table

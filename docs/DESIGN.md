@@ -143,6 +143,7 @@ alert if score > threshold AND edits_in_window >= min_edits AND distinct_editors
 
 - Requiring a minimum number of distinct editors filters out a single user making many small edits.
 - Start from defaults (threshold 4, min_edits 5, min_editors 3), then tune on replayed data.
+- **These defaults are known to be too strict.** A recorded world news event produced about 17 edits by 10 editors in its first hour, on a page that did not exist before (finding 16 in [DATA_SOURCE.md](DATA_SOURCE.md)). The window length, the thresholds and the handling of new pages will be redesigned against that recording in Phase 3.
 - **Success metric:** detection delay (minutes between the real-world event and the alert) for a set of known events.
 
 ## 7. Phases
