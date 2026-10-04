@@ -1,11 +1,12 @@
 .DEFAULT_GOAL := help
-.PHONY: help up down ps logs clean sync lint fmt typecheck test
+.PHONY: help up down ps logs clean topics ingest sync lint fmt typecheck test
 
 help: ## Show this help
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | sed -E 's/:.*## /  -  /'
 
-up: ## Start the stack in the background
+up: ## Start the stack in the background and create topics
 	docker compose up -d --wait
+	$(MAKE) topics
 
 down: ## Stop the stack (data volumes are kept)
 	docker compose down
@@ -18,6 +19,12 @@ logs: ## Follow service logs
 
 clean: ## Stop the stack and delete its data volumes
 	docker compose down -v
+
+topics: ## Create the Kafka topics if they do not exist
+	docker compose exec -T redpanda sh -s < scripts/create-topics.sh
+
+ingest: ## Run the ingestion service (Ctrl+C to stop)
+	uv run python -m ingestion
 
 sync: ## Install Python dependencies
 	uv sync

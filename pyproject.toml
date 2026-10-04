@@ -4,7 +4,12 @@ version = "0.1.0"
 description = "Real-time breaking-news detection from the live Wikipedia edit stream"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "confluent-kafka>=2.6",
+    "httpx>=0.27",
+    "httpx-sse>=0.4",
+    "pydantic-settings>=2.5",
+]
 
 [dependency-groups]
 dev = [
@@ -30,3 +35,4 @@ strict = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
