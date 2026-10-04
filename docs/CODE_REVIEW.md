@@ -9,7 +9,7 @@ Find the problems that matter before the code is merged, and say clearly whether
 The reviewer is independent of the author:
 
 - **Verify, don't trust.** The PR description is a claim, not evidence. Check it against the code and against what the checks actually report.
-- **Report, don't fix.** The reviewer does not push commits to the PR. Fixes are the author's job, so that the review stays a second opinion.
+- **Report, don't fix.** The reviewer never changes code and never pushes to the PR. It examines the change, works out what is wrong, and writes findings. Fixes are the author's job, so that the review stays a second opinion.
 - **Passing tests are not approval.** They show that what was tested works. The review asks what was not tested.
 - **Judge the code, not the effort.** A large or carefully described PR gets the same scrutiny as a small one.
 
@@ -124,7 +124,28 @@ End with one of:
 - **Approve:** no blockers, and every "should fix" is either fixed or has a tracked follow-up.
 - **Request changes:** at least one blocker, or "should fix" items with no plan.
 
-The verdict is a recommendation. The repository owner makes the merge decision.
+The verdict is a recommendation. Only the repository owner approves a merge.
+
+## After the review
+
+The reviewer never changes code. What happens to the findings is the author's job, and the result is written down:
+
+1. The author answers every finding with one of:
+   - **Fixed:** what changed, and in which commit.
+   - **Deferred:** why it is not fixed now, and the roadmap item or issue that tracks it.
+   - **Declined:** why the author disagrees.
+2. The author posts a **changes after review** summary on the PR (template below). Every blocker must be fixed. A blocker cannot be deferred or declined without the owner agreeing.
+3. If code changed, the checks are run again and their results are stated.
+4. The reviewer looks again at the blockers only, and confirms or disputes each fix.
+
+## Merge decision
+
+The owner decides, and only the owner. The decision is made from two summaries, both on the PR:
+
+- the **PR description**: what the change is and how it was verified, and
+- the **changes after review**: what the review found and what was done about each finding.
+
+A PR without both is not ready for a decision.
 
 ## Review template
 
@@ -156,3 +177,19 @@ What the reviewer could not check, and why.
 ```
 
 Leave a section out when it is empty, except **Not verified**: say "nothing" if everything was checked.
+
+## Changes-after-review template
+
+```markdown
+## Changes after review
+
+**Checks after the changes:** lint <pass/fail> · typecheck <pass/fail> · tests <n passed, n failed>
+
+| # | Finding | Severity | Outcome | What was done |
+|---|---|---|---|---|
+| 1 | One-line description | Blocker | Fixed | What changed (commit abc1234) |
+| 2 | ... | Should fix | Deferred | Why, and where it is tracked |
+| 3 | ... | Suggestion | Declined | Why |
+
+**Behaviour changed by these fixes:** what a user or operator would notice, or "none".
+```

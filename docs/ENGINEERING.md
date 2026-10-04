@@ -96,7 +96,8 @@ These follow from [ADR-0006](adr/0006-data-scope-and-retention.md), [ADR-0007](a
 ## 7. Process
 
 - **One PR, one purpose.** The description answers four questions: why, what changed, how it was verified, and what is not included.
-- **Every PR is reviewed before it is merged,** following [CODE_REVIEW.md](CODE_REVIEW.md). The author does not approve their own work.
+- **Every PR is reviewed before it is merged,** following [CODE_REVIEW.md](CODE_REVIEW.md). The reviewer only reports. The author fixes and writes a summary of what changed after the review.
+- **Only the repository owner approves a merge,** after reading the PR description and the changes-after-review summary.
 - **A significant decision gets an ADR.** A tool choice or an architecture change is recorded in [`docs/adr/`](adr/).
 - **Docs change with the code.** The roadmap, the README commands and the data notes are updated in the same PR.
 
