@@ -12,6 +12,8 @@ Only about 9% of the stream is the signal we detect on (human edits to Wikipedia
 3. **Tiered retention:** Redpanda 3 days, bronze 14 days, silver 90 days, gold unlimited.
 4. **Disk usage per layer is monitored**, and the retention values are revisited based on real numbers.
 
+**Amendment, 2026-10-04:** the dead-letter topic `wiki.dlq` is kept for 14 days instead of 3. Dead-lettered events are what we inspect when something breaks, and problems are often noticed days later. The volume is negligible. Once the DLQ triage agent reads the topic daily, this drops to 7 days.
+
 ## Alternatives considered
 - **Filter in the producer:** about 10x less storage, but dropped data cannot be recovered. A wrong filter, or a new question about bots or Commons, would need data we no longer have.
 - **Keep everything forever:** simplest, but at roughly 0.5GB/day compressed (an estimate) the disk fills within a year, and nothing uses raw events that old.

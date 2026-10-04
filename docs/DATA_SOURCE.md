@@ -79,7 +79,12 @@ Each SSE message carries an `id` with the upstream Kafka topic, partition and ti
 
 **Adaptation:** the producer stores the last `id` it delivered and sends it back as `Last-Event-ID` on reconnect.
 
+### 11. Resuming really works, and every event carries its upstream offset
+Sending a `Last-Event-ID` with a timestamp five minutes in the past returned 8,550 events in eight seconds, starting exactly at that timestamp. Each event also carries `meta.topic`, `meta.partition` and `meta.offset` from Wikimedia's Kafka, and those offsets were consecutive.
+
+**Adaptation:** the upstream offsets are a free loss detector. `make check-gaps` reads the raw topic and reports missing and duplicated offsets.
+
 ## Open questions
 - How do volume and the type mix change over 24 hours and during a major news event?
-- How far back does `Last-Event-ID` allow resuming?
+- How far back does `Last-Event-ID` allow resuming? Five minutes works. The limit is not measured yet.
 - Do `canary` test events (`meta.domain = "canary"`) appear? None in this sample. If they do, drop them at ingestion.

@@ -25,11 +25,12 @@ Goal: a repo that opens in Codespaces with one click and has green CI.
 Goal: Wikipedia events flowing into Redpanda reliably.
 
 - [x] Redpanda + Redpanda Console in docker-compose
-- [x] Topics: `wiki.raw` (3 partitions), `wiki.dlq` (1 partition), 3-day retention
+- [x] Topics: `wiki.raw` (3 partitions, 3-day retention), `wiki.dlq` (1 partition, 14-day retention)
 - [x] Async SSE client with a proper User-Agent
 - [x] Reconnect with exponential backoff, resuming via `Last-Event-ID` held in memory
-- [ ] Resume after a process restart, from the `last_event_id` header of the last message in Kafka
-- [ ] Test reconnect behaviour (drop the connection, check for gaps and duplicates)
+- [x] Resume after a process restart, from the `last_event_id` header of the last message in Kafka
+- [x] Test reconnect behaviour: unit tests with a fake transport, and a live test with the connection cut
+- [x] `make check-gaps`: detect lost and duplicated events from the upstream offsets
 - [x] Kafka producer: keying, idempotence, batching ([ADR-0007](adr/0007-ingestion-message-contract.md))
 - [x] Validation: invalid events go to the DLQ, never crash the producer
 - [ ] Run the producer as a container in docker-compose
@@ -80,6 +81,20 @@ Goal: the system detects breaking news live and shows it on a dashboard.
 - [ ] Dashboards: consumer lag, throughput, end-to-end latency, DLQ rate, Spark batch duration
 - [ ] Disk usage per layer (topics, bronze, silver, gold), used to revisit retention values
 - [ ] Alert rules (lag too high, producer disconnected, disk filling up)
+
+### DLQ triage agent
+Goal: nobody has to read the dead-letter topic by hand. An agent reads it, decides whether a failure is a bug on our side, and opens a ticket.
+
+Needs first: the pipeline running continuously, replay mode (to inject broken events for testing), and an LLM API key.
+
+- [ ] Scheduled job, once a day by default, with a configurable interval (shorter for testing)
+- [ ] Read only the dead-letter records that arrived since the last run
+- [ ] Group records by failure reason and event shape, so many records of one failure become one finding
+- [ ] LLM analysis per group: our bug, upstream data problem, or transient
+- [ ] For our bugs: open a GitHub issue in this repo with evidence, sample records, the suspect code and a suggested fix
+- [ ] Do not open a second issue for a failure that already has an open one
+- [ ] Guardrails: record contents are untrusted text, the agent can only open issues from a fixed template, and there is a daily cap on issues
+- [ ] Once the agent is running, reduce `wiki.dlq` retention from 14 days to 7
 
 ## Phase 6: Cloud
 - [ ] AWS budget alert before the first `terraform apply`

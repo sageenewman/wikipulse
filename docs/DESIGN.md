@@ -87,7 +87,8 @@ Decided in [ADR-0006](adr/0006-data-scope-and-retention.md).
 
 | Layer | Retention | Why |
 |---|---|---|
-| Redpanda topics | 3 days | Buffer for consumer downtime and short replays |
+| `wiki.raw` topic | 3 days | Buffer for consumer downtime and short replays |
+| `wiki.dlq` topic | 14 days | Evidence for debugging. Drops to 7 days once the DLQ triage agent runs |
 | Bronze | 14 days | Window for reprocessing after a bug |
 | Silver | 90 days | History for baselines and analysis |
 | Gold | Unlimited | Small aggregates |
