@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help up down ps logs clean topics ingest check-gaps sync lint fmt typecheck test
+.PHONY: help up down ps logs clean topics ingest record replay check-gaps sync lint fmt typecheck test
 
 help: ## Show this help
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | sed -E 's/:.*## /  -  /'
@@ -25,6 +25,12 @@ topics: ## Create the Kafka topics if they do not exist
 
 ingest: ## Run the ingestion service (Ctrl+C to stop)
 	uv run python -m ingestion
+
+record: ## Record the stream to a file: make record OUT=data/recordings/x.jsonl.gz ARGS="--since-minutes 10"
+	uv run python -m ingestion record --out $(OUT) $(ARGS)
+
+replay: ## Publish a recording to Kafka: make replay FILE=data/recordings/x.jsonl.gz SPEED=10
+	uv run python -m ingestion replay $(FILE) --speed $(or $(SPEED),1)
 
 check-gaps: ## Check the raw topic for lost or duplicated events
 	PYTHONPATH=. uv run python scripts/check_gaps.py

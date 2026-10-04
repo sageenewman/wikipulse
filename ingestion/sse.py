@@ -25,6 +25,7 @@ async def stream_events(
     settings: Settings,
     *,
     start_event_id: str = "",
+    since: str = "",
     transport: httpx.AsyncBaseTransport | None = None,
 ) -> AsyncGenerator[StreamMessage, None]:
     """Yield stream messages forever, reconnecting when the connection drops.
@@ -32,6 +33,10 @@ async def stream_events(
     Every (re)connect resumes from the last message seen, or from `start_event_id`
     on the first connect. Wikimedia replays from that position, so messages can
     repeat around a reconnect but are not skipped (at-least-once).
+
+    `since` is an ISO timestamp: start from that point in the past instead of
+    the live edge. It applies only until the first message arrives; after that
+    the stream position takes over.
 
     `transport` exists so tests can replace the network.
     """
@@ -43,9 +48,10 @@ async def stream_events(
     async with httpx.AsyncClient(timeout=timeout, headers=headers, transport=transport) as client:
         while True:
             resume = {"Last-Event-ID": last_event_id} if last_event_id else {}
+            params = {"since": since} if since and not last_event_id else {}
             try:
                 async with aconnect_sse(
-                    client, "GET", settings.stream_url, headers=resume
+                    client, "GET", settings.stream_url, headers=resume, params=params
                 ) as source:
                     source.response.raise_for_status()
                     log.info("stream connected", extra={"resumed": bool(last_event_id)})

@@ -5,8 +5,11 @@ from typing import Any
 import pytest
 
 from ingestion.events import Invalid, Skipped, Valid, build_key, classify
+from ingestion.recording import read_recording
 
-SAMPLE = Path(__file__).parent.parent / "data" / "samples" / "recentchange_sample.jsonl"
+SAMPLES = Path(__file__).parent.parent / "data" / "samples"
+SAMPLE = SAMPLES / "recentchange_sample.jsonl"
+BROKEN = SAMPLES / "broken_events.jsonl"
 
 
 def make_event(**overrides: Any) -> dict[str, Any]:
@@ -26,9 +29,27 @@ def test_valid_event_is_keyed_by_wiki_and_title() -> None:
 
 def test_every_real_sample_event_is_valid() -> None:
     """The sample holds real edit, new, categorize and log events."""
-    lines = SAMPLE.read_text(encoding="utf-8").splitlines()
-    assert len(lines) == 40
-    assert all(isinstance(classify(line), Valid) for line in lines)
+    messages = list(read_recording(SAMPLE))
+    assert len(messages) == 40
+    assert all(isinstance(classify(message.data), Valid) for message in messages)
+
+
+def test_broken_sample_covers_every_verdict() -> None:
+    """The broken-events recording exists to exercise the dead-letter path."""
+    verdicts = [classify(message.data) for message in read_recording(BROKEN)]
+    reasons = sorted(v.reason for v in verdicts if isinstance(v, Invalid))
+
+    assert sum(isinstance(v, Valid) for v in verdicts) == 2
+    assert [v for v in verdicts if isinstance(v, Skipped)] == [Skipped("canary")]
+    assert reasons == [
+        "invalid_json",
+        "missing_meta",
+        "missing_meta_dt",
+        "missing_meta_id",
+        "missing_type",
+        "missing_wiki",
+        "not_an_object",
+    ]
 
 
 def test_event_without_revision_is_valid() -> None:
