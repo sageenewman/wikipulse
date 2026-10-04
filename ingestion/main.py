@@ -11,6 +11,7 @@ from ingestion.config import Settings
 from ingestion.events import Invalid, Skipped, Valid, classify
 from ingestion.log import configure_logging
 from ingestion.publisher import Headers, Publisher
+from ingestion.resume import find_resume_position
 from ingestion.sse import StreamMessage, stream_events
 
 log = logging.getLogger("ingestion")
@@ -39,9 +40,11 @@ def handle(
             stats["skipped"] += 1
 
 
-async def pump(settings: Settings, publisher: Publisher, stats: Counter[str]) -> None:
+async def pump(
+    settings: Settings, publisher: Publisher, stats: Counter[str], start_event_id: str
+) -> None:
     last_report = time.monotonic()
-    async for message in stream_events(settings):
+    async for message in stream_events(settings, start_event_id=start_event_id):
         handle(message, publisher, settings, stats)
         now = time.monotonic()
         if now - last_report >= settings.stats_interval_seconds:
@@ -65,11 +68,17 @@ async def run(settings: Settings) -> None:
     for sig in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(sig, stop.set)
 
+    # Continue from where the previous run stopped, so a restart loses nothing.
+    start_event_id = find_resume_position(settings) if settings.resume_on_start else ""
     log.info(
         "ingestion starting",
-        extra={"stream_url": settings.stream_url, "raw_topic": settings.raw_topic},
+        extra={
+            "stream_url": settings.stream_url,
+            "raw_topic": settings.raw_topic,
+            "resume_from": start_event_id or "now",
+        },
     )
-    pump_task = asyncio.create_task(pump(settings, publisher, stats))
+    pump_task = asyncio.create_task(pump(settings, publisher, stats, start_event_id))
     stop_task = asyncio.create_task(stop.wait())
     try:
         await asyncio.wait({pump_task, stop_task}, return_when=asyncio.FIRST_COMPLETED)
