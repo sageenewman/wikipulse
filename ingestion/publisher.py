@@ -8,7 +8,8 @@ from ingestion.config import Settings
 
 log = logging.getLogger(__name__)
 
-Headers = list[tuple[str, bytes]]
+# Matches the header type confluent-kafka accepts.
+Headers = list[tuple[str, str | bytes | None]]
 
 
 class Publisher:

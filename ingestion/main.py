@@ -10,19 +10,21 @@ from contextlib import suppress
 from ingestion.config import Settings
 from ingestion.events import Invalid, Skipped, Valid, classify
 from ingestion.log import configure_logging
-from ingestion.publisher import Publisher
+from ingestion.publisher import Headers, Publisher
 from ingestion.sse import StreamMessage, stream_events
 
 log = logging.getLogger("ingestion")
 
 
-def handle(message: StreamMessage, publisher: Publisher, settings: Settings, stats: Counter[str]) -> None:
+def handle(
+    message: StreamMessage, publisher: Publisher, settings: Settings, stats: Counter[str]
+) -> None:
     """Route one stream message: raw topic, dead-letter topic, or drop."""
     verdict = classify(message.data)
     value = message.data.encode()
     # The upstream position travels with every message, so a later version can
     # recover the resume point from Kafka itself after a restart.
-    headers = [("last_event_id", message.event_id.encode())]
+    headers: Headers = [("last_event_id", message.event_id.encode())]
 
     match verdict:
         case Valid(key=key):
