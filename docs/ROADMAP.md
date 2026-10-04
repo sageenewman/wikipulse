@@ -48,6 +48,22 @@ Goal: Wikipedia events flowing into Redpanda reliably.
 - [ ] Integration test with Testcontainers
 - [x] Graceful shutdown (flush the producer on SIGINT/SIGTERM)
 
+## Quality pass (before Phase 2)
+Goal: the code meets [ENGINEERING.md](ENGINEERING.md), and the checks run by themselves.
+
+- [x] Engineering guidelines ([ENGINEERING.md](ENGINEERING.md))
+- [x] Code review guide ([CODE_REVIEW.md](CODE_REVIEW.md))
+- [ ] GitHub Actions CI on every PR: lint, type-check, tests
+- [ ] Complexity and function-length limits in `ruff`
+- [ ] Test coverage measured, with a minimum of 85% in CI
+- [ ] `MessageSink` protocol for the Kafka publisher; remove `cast` from the tests
+- [ ] Move message routing out of `main.py` into its own module, with injected dependencies
+- [ ] Tests for the main loop and for graceful shutdown
+- [ ] Split the recorder: stop policy, part writing and merging
+- [ ] Integration tests against a real broker for `resume.py` and `check_gaps.py`
+- [ ] Decide what happens when a delivery to Kafka fails for good (today it is only counted and logged)
+- [ ] Automated reviewer that applies [CODE_REVIEW.md](CODE_REVIEW.md) to every PR
+
 ## Phase 2: Lakehouse (bronze & silver)
 Goal: events land in Iceberg, clean and deduplicated.
 
