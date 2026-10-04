@@ -12,9 +12,7 @@ from ingestion.sse import StreamMessage
 TOPICS_ID = json.dumps([{"topic": "busy"}, {"topic": "quiet"}])
 
 
-def message(
-    event_id: str, second: int, topic: str | None = None, **extra: object
-) -> StreamMessage:
+def message(event_id: str, second: int, topic: str | None = None, **extra: object) -> StreamMessage:
     """A stream message whose event was produced at 10:00:00 plus `second` seconds."""
     produced = datetime(2026, 10, 4, 10, 0, tzinfo=UTC) + timedelta(seconds=second)
     meta = {"dt": produced.strftime("%Y-%m-%dT%H:%M:%S.000Z")}

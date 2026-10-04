@@ -26,7 +26,6 @@ from typing import IO, Literal
 
 from ingestion.sse import StreamMessage
 
-
 # Part files hold "<sort key><separator><recording line>". The key is the event
 # time in microseconds, zero-padded so that text order equals time order.
 _KEY_WIDTH = 20
@@ -146,7 +145,6 @@ async def record(
             part.close()
         _merge_parts(parts_dir, path)
     return count
-
 
 
 def _merge_parts(parts_dir: Path, path: Path) -> None:
