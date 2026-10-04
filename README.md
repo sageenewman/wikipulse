@@ -32,11 +32,12 @@ Kafka (Redpanda) · Spark Structured Streaming · Apache Iceberg · dbt · DuckD
 Open the repo in GitHub Codespaces (**Code → Codespaces → Create codespace**). The dev container installs the tooling. Then:
 
 ```bash
-make up     # start Redpanda and Redpanda Console
-make ps     # check that services are healthy
-make down   # stop everything
+make up      # start Redpanda and Redpanda Console, create the topics
+make ingest  # stream live Wikimedia events into the wiki.raw topic (Ctrl+C to stop)
+make test    # run the tests
+make down    # stop everything
 ```
 
-Redpanda Console is served on port 8080. Run `make help` for all commands.
+Redpanda Console is served on port 8080: open **Topics → wiki.raw** to watch events arrive. Run `make help` for all commands.
 
-The pipeline itself is still being built. See the [roadmap](docs/ROADMAP.md).
+The rest of the pipeline is still being built. See the [roadmap](docs/ROADMAP.md).
