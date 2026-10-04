@@ -1,8 +1,8 @@
 """Entry point.
 
-    python -m ingestion                      live stream -> Kafka
-    python -m ingestion record --out FILE    live stream -> file
-    python -m ingestion replay FILE          file -> Kafka
+python -m ingestion                      live stream -> Kafka
+python -m ingestion record --out FILE    live stream -> file
+python -m ingestion replay FILE          file -> Kafka
 """
 
 import argparse

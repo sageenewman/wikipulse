@@ -19,14 +19,14 @@ import time
 from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, Iterator
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import IO
+from typing import IO, Literal
 
 from ingestion.sse import StreamMessage
 
 
-def open_text(path: Path, mode: str) -> IO[str]:
+def open_text(path: Path, mode: Literal["r", "w"]) -> IO[str]:
     if path.suffix == ".gz":
-        return gzip.open(path, mode + "t", encoding="utf-8")
+        return gzip.open(path, "rt" if mode == "r" else "wt", encoding="utf-8")
     return path.open(mode, encoding="utf-8")
 
 
