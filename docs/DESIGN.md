@@ -77,6 +77,23 @@ When something happens in the world (an earthquake, a celebrity death, an electi
 | `wiki.alerts` | Detected spikes |
 | `wiki.dlq` | Events that failed validation |
 
+### Data scope and retention
+
+Decided in [ADR-0006](adr/0006-data-scope-and-retention.md).
+
+- **Ingestion never filters.** The producer forwards every valid event, and bronze stores the whole stream.
+- **Processing filters.** Silver and detection work only on wikis in a configurable allowlist (`WIKI_ALLOWLIST`). It starts with `enwiki` only and grows by configuration, not by code changes.
+- **Retention is tiered.** Raw data is kept briefly, and small aggregates are kept for good.
+
+| Layer | Retention | Why |
+|---|---|---|
+| Redpanda topics | 3 days | Buffer for consumer downtime and short replays |
+| Bronze | 14 days | Window for reprocessing after a bug |
+| Silver | 90 days | History for baselines and analysis |
+| Gold | Unlimited | Small aggregates |
+
+These are starting values. Disk usage per layer is tracked, and the values are adjusted if storage grows faster than expected or there is room to keep more.
+
 ## 4. Stack and rationale
 
 Detailed reasoning lives in [ADRs](adr/).
