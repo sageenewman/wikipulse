@@ -10,10 +10,13 @@ too. A path ending in `.gz` is compressed.
 Replay feeds the same code path as the live stream, so the same validation,
 keys and dead-lettering apply. It makes runs repeatable and lets us push far
 more load than the live stream offers.
+
+Recordings are ordered by event time (see `record`).
 """
 
 import asyncio
 import gzip
+import heapq
 import json
 import time
 from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, Iterator
@@ -48,10 +51,25 @@ def read_recording(path: Path) -> Iterator[StreamMessage]:
 
 def event_time(data: str) -> datetime | None:
     """When the event was produced upstream (`meta.dt`), or None if unreadable."""
+    return _time_and_topic(data)[0]
+
+
+def _time_and_topic(data: str) -> tuple[datetime | None, str]:
+    """`meta.dt` and `meta.topic` of an event. Unreadable parts come back as None / ""."""
     try:
-        return datetime.fromisoformat(json.loads(data)["meta"]["dt"])
+        meta = json.loads(data)["meta"]
+        topic = meta.get("topic")
+        return datetime.fromisoformat(meta["dt"]), topic if isinstance(topic, str) else ""
+    except (ValueError, KeyError, TypeError, AttributeError):
+        return None, ""
+
+
+def _upstream_topics(event_id: str) -> set[str]:
+    """The upstream topics behind the stream, as listed in a message id."""
+    try:
+        return {entry["topic"] for entry in json.loads(event_id)}
     except (ValueError, KeyError, TypeError):
-        return None
+        return set()
 
 
 async def record(
@@ -61,29 +79,84 @@ async def record(
     seconds: float | None = None,
     max_events: int | None = None,
     until: datetime | None = None,
+    margin_seconds: float = 60.0,
+    idle_grace_seconds: float = 15.0,
 ) -> int:
-    """Write messages from `source` to `path` until a limit is reached.
+    """Write messages from `source` to `path`, ordered by event time.
 
-    `until` stops once an event at or after that time arrives. It is used when
-    recording history, to stop when the stream has caught up with the present.
+    The stream is fed by more than one upstream topic. When it serves history,
+    each topic arrives in time order but the topics are not merged: a quiet
+    topic can run hours ahead of a busy one. So each topic is written to its own
+    part file, and the parts are merged by event time at the end.
+
+    Stops after `seconds`, after `max_events`, or at `until`:
+    events at or after `until` are not written, and recording ends once every
+    upstream topic has gone `margin_seconds` past it. If only some topics get
+    there (a quiet topic may have nothing newer), it ends after
+    `idle_grace_seconds` without anything left to write.
+
     Returns the number of messages written.
     """
     deadline = time.monotonic() + seconds if seconds is not None else None
+    parts_dir = path.parent / (path.name + ".parts")
+    parts_dir.mkdir(parents=True, exist_ok=True)
+    parts: dict[str, IO[str]] = {}
+    last_key: dict[str, int] = {}
+    expected: set[str] = set()
+    passed: set[str] = set()
+    last_write = time.monotonic()
     count = 0
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open_text(path, "w") as file:
+    try:
         async for message in source:
-            file.write(encode(message) + "\n")
-            count += 1
+            produced, topic = _time_and_topic(message.data)
+            expected = _upstream_topics(message.event_id) or expected | {topic}
+            now = time.monotonic()
+
+            if until is not None and produced is not None and produced >= until:
+                if (produced - until).total_seconds() >= margin_seconds:
+                    passed.add(topic)
+            else:
+                if topic not in parts:
+                    parts[topic] = (parts_dir / f"{len(parts)}.part").open("w", encoding="utf-8")
+                # An event with no readable time keeps its place: it sorts with
+                # the event before it.
+                if produced is not None:
+                    last_key[topic] = int(produced.timestamp() * 1_000_000)
+                parts[topic].write(f"{last_key.get(topic, 0):020d}	{encode(message)}
+")
+                count += 1
+                last_write = now
+
             if max_events is not None and count >= max_events:
                 break
-            if deadline is not None and time.monotonic() >= deadline:
+            if deadline is not None and now >= deadline:
                 break
-            if until is not None:
-                produced = event_time(message.data)
-                if produced is not None and produced >= until:
-                    break
+            if passed and (expected <= passed or now - last_write >= idle_grace_seconds):
+                break
+    finally:
+        # Also runs when interrupted, so a partial recording is still usable.
+        for part in parts.values():
+            part.close()
+        _merge_parts(parts_dir, path)
     return count
+
+
+_KEY_WIDTH = 20
+
+
+def _merge_parts(parts_dir: Path, path: Path) -> None:
+    part_paths = sorted(parts_dir.glob("*.part"))
+    files = [part.open("r", encoding="utf-8") for part in part_paths]
+    try:
+        with open_text(path, "w") as out:
+            for line in heapq.merge(*files, key=lambda line: line[:_KEY_WIDTH]):
+                out.write(line[_KEY_WIDTH + 1 :])
+    finally:
+        for file in files:
+            file.close()
+    for part in part_paths:
+        part.unlink()
+    parts_dir.rmdir()
 
 
 async def replay(

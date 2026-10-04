@@ -12,6 +12,7 @@ import signal
 import time
 from collections import Counter
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime
 from pathlib import Path
 
 from ingestion import recording
@@ -132,21 +133,33 @@ async def run_record(
     path: Path,
     seconds: float | None,
     max_events: int | None,
-    since_minutes: float | None,
+    since: datetime | None,
+    until: datetime | None,
 ) -> None:
-    since = recording.minutes_ago(since_minutes) if since_minutes else None
     # Recording history stops by itself once it has caught up with the present.
-    until = recording.minutes_ago(0) if since else None
+    if since is not None and until is None:
+        until = recording.minutes_ago(0)
     log.info(
         "recording starting",
-        extra={"out": str(path), "since": since.isoformat() if since else "now"},
+        extra={
+            "out": str(path),
+            "since": since.isoformat() if since else "now",
+            "until": until.isoformat() if until else "stopped by hand or by a limit",
+        },
     )
-    source = stream_events(settings, since=since.strftime("%Y-%m-%dT%H:%M:%SZ") if since else "")
+    since_param = since.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ") if since else ""
+    source = stream_events(settings, since=since_param)
     count = await recording.record(
         source, path, seconds=seconds, max_events=max_events, until=until
     )
     await source.aclose()
     log.info("recording finished", extra={"out": str(path), "events": count})
+
+
+def utc_time(text: str) -> datetime:
+    """Parse an ISO timestamp. A time with no zone is taken as UTC."""
+    parsed = datetime.fromisoformat(text)
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -161,6 +174,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--since-minutes",
         type=float,
         help="start this many minutes in the past and stop when caught up with now",
+    )
+    record.add_argument(
+        "--from",
+        dest="since",
+        type=utc_time,
+        help="start at this time, e.g. 2026-09-30T10:00:00Z (Wikimedia keeps about 7 days)",
+    )
+    record.add_argument(
+        "--to", dest="until", type=utc_time, help="stop at this time (default: now)"
     )
 
     replay = commands.add_parser("replay", help="publish a recorded file to Kafka")
@@ -180,8 +202,11 @@ def main(argv: list[str] | None = None) -> None:
     configure_logging(settings.log_level)
     match args.command:
         case "record":
+            since = args.since
+            if since is None and args.since_minutes:
+                since = recording.minutes_ago(args.since_minutes)
             asyncio.run(
-                run_record(settings, args.out, args.seconds, args.max_events, args.since_minutes)
+                run_record(settings, args.out, args.seconds, args.max_events, since, args.until)
             )
         case "replay":
             asyncio.run(run_replay(settings, args.path, args.speed))
