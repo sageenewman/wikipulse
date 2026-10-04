@@ -34,12 +34,21 @@ fix(streaming): dedupe on meta.id instead of revision id
 
 ## Code conventions
 
-- **Python 3.12**, type hints everywhere. `ruff` for lint and format, `mypy` for type checks, `pytest` for tests.
-- Configuration comes from environment variables through a settings module. No hardcoded hosts or ports.
-- Keep pure logic (parsing, dedup keys, spike scoring) separate from I/O so it can be unit-tested.
-- Streaming code is tested with recorded samples and replay mode, not against the live stream.
-- Logs are structured (JSON). Every service exposes metrics.
-- No secrets in the repo. Use `.env` (gitignored) and keep `.env.example` up to date.
+The full rules are in [docs/ENGINEERING.md](docs/ENGINEERING.md). In short:
+
+- **Python 3.12**, type hints everywhere. `ruff` for lint and format, `mypy` in strict mode, `pytest` for tests.
+- Pure logic is kept apart from I/O. External systems sit behind protocols and are passed in.
+- A change in behaviour comes with a test.
+- No error is swallowed.
+- Configuration comes from environment variables. No secrets in the repo.
+
+## Code review
+
+Every PR is reviewed before it is merged, following [docs/CODE_REVIEW.md](docs/CODE_REVIEW.md):
+
+1. The reviewer examines the change and reports findings. The reviewer never changes code.
+2. The author answers every finding and posts a summary of the changes made after the review.
+3. The repository owner approves the merge, after reading the PR description and that summary.
 
 ## Design decisions
 
