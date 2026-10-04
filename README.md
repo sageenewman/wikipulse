@@ -39,6 +39,9 @@ make check-gaps  # verify that no events were lost or duplicated
 # record the last 10 minutes of the stream, then replay them 10x faster
 make record OUT=data/recordings/sample.jsonl.gz ARGS="--since-minutes 10"
 make replay FILE=data/recordings/sample.jsonl.gz SPEED=10
+
+# record a past window (Wikimedia keeps about 7 days)
+make record OUT=data/recordings/event.jsonl.gz ARGS="--from 2026-09-30T09:00:00Z --to 2026-10-01T00:00:00Z"
 make test    # run the tests
 make down    # stop everything
 ```
