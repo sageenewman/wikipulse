@@ -84,6 +84,18 @@ Sending a `Last-Event-ID` with a timestamp five minutes in the past returned 8,5
 
 **Adaptation:** the upstream offsets are a free loss detector. `make check-gaps` reads the raw topic and reports missing and duplicated offsets.
 
+### 12. Volume and size, measured on longer runs
+- A 10-minute live run carried 21,445 events: about 36 per second, or 3.1M per day. That is a little above the first one-minute sample.
+- A 10-minute recording (20,875 events) is 4.3MB gzipped, about 207 bytes per event. At that ratio a day of raw events is roughly 0.65GB compressed.
+- In 28,000+ live events, none failed validation and none were canary events.
+
+**Adaptation:** the 0.5GB/day estimate in ADR-0006 was close, and the retention values stay as they are. Redpanda's on-disk size could not be read from the file system, because it preallocates 32MiB per partition segment. Measure it through its metrics once monitoring exists.
+
+### 13. History is available on request
+`?since=<ISO timestamp>` starts the stream in the past. Ten minutes of history arrived in five seconds.
+
+**Adaptation:** `make record ARGS="--since-minutes N"` records history and stops when it reaches the present. A news event can be captured after it happened, as long as it is still inside Wikimedia's retention.
+
 ## Open questions
 - How do volume and the type mix change over 24 hours and during a major news event?
 - How far back does `Last-Event-ID` allow resuming? Five minutes works. The limit is not measured yet.

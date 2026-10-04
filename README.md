@@ -35,6 +35,10 @@ Open the repo in GitHub Codespaces (**Code → Codespaces → Create codespace**
 make up      # start Redpanda and Redpanda Console, create the topics
 make ingest  # stream live Wikimedia events into the wiki.raw topic (Ctrl+C to stop)
 make check-gaps  # verify that no events were lost or duplicated
+
+# record the last 10 minutes of the stream, then replay them 10x faster
+make record OUT=data/recordings/sample.jsonl.gz ARGS="--since-minutes 10"
+make replay FILE=data/recordings/sample.jsonl.gz SPEED=10
 make test    # run the tests
 make down    # stop everything
 ```

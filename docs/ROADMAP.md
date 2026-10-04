@@ -35,9 +35,11 @@ Goal: Wikipedia events flowing into Redpanda reliably.
 - [x] Validation: invalid events go to the DLQ, never crash the producer
 - [ ] Run the producer as a container in docker-compose
 - [ ] Schema Registry: register a JSON Schema for the raw events (messages stay raw JSON)
-- [ ] Recorder: save N minutes of live events to `data/samples/*.jsonl`
+- [x] Recorder: save the stream to a file, live or from a point in the past (`make record`)
+- [x] Replay mode: publish a recording to Kafka at the original pace, faster, or unpaced (`make replay`)
+- [x] Sample of deliberately broken events for exercising the dead-letter path
 - [ ] Record 24 hours and re-measure the numbers in [DATA_SOURCE.md](DATA_SOURCE.md)
-- [ ] Replay mode: produce from a sample file (with optional speed-up)
+- [ ] Load test with a recording of an hour or more (the first measurement lasted about a second)
 - [ ] Prometheus metrics: events/sec, reconnects, DLQ count
 - [x] Unit tests (validation, keying, routing)
 - [ ] Integration test with Testcontainers
