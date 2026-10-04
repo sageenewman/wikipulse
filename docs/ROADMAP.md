@@ -13,19 +13,19 @@ Goal: a repo that opens in Codespaces with one click and has green CI.
 - [x] Design document and initial ADRs
 - [x] Public GitHub repo
 - [ ] License
-- [ ] `.devcontainer/devcontainer.json`: Python 3.12, Docker-in-Docker, Java 17 (for Spark), 4-core machine
-- [ ] `pyproject.toml` with ruff, mypy, pytest config (uv for dependency management)
-- [ ] `Makefile` with `up`, `down`, `test`, `lint`, `fmt`
-- [ ] `docker-compose.yml` skeleton with profiles and memory limits
-- [ ] `.env.example`
-- [ ] GitHub Actions CI: lint + type-check + tests
-- [ ] Verify the environment end to end in Codespaces
+- [x] `.devcontainer/devcontainer.json`: Docker-in-Docker, uv-managed Python 3.12, 2-core machine (Java 17 and 4 cores are added with Spark in Phase 2)
+- [x] `pyproject.toml` with ruff, mypy, pytest config (uv for dependency management)
+- [x] `Makefile` with `up`, `down`, `test`, `lint`, `fmt`
+- [x] `docker-compose.yml` with Redpanda, Redpanda Console and memory limits
+- [x] `.env.example`
+- [x] Verify the environment end to end in Codespaces
+- [ ] GitHub Actions CI: lint + type-check + tests (once there is code to check)
 
 ## Phase 1: Ingestion
 Goal: Wikipedia events flowing into Redpanda reliably.
 
-- [ ] Redpanda + Redpanda Console in docker-compose
-- [ ] Topics: `wiki.raw`, `wiki.dlq` (document partitions and retention)
+- [x] Redpanda + Redpanda Console in docker-compose
+- [ ] Topics: `wiki.raw`, `wiki.dlq` with 3-day retention (document the partition count)
 - [ ] Async SSE client with a proper User-Agent
 - [ ] Reconnect with exponential backoff + resume via `Last-Event-ID`
 - [ ] Kafka producer: keying strategy, acks, idempotence, batching (document the choices)
@@ -45,6 +45,7 @@ Goal: events land in Iceberg, clean and deduplicated.
 - [ ] Spark Structured Streaming job: `wiki.raw` → `bronze.recentchange` (append, raw)
 - [ ] Checkpointing, verified by killing and restarting the job
 - [ ] Silver job: parse, normalize, dedupe on `meta.id` with a watermark
+- [ ] Wiki allowlist (`WIKI_ALLOWLIST`, starting with `enwiki`) applied in silver, never at ingestion
 - [ ] Partitioning strategy for silver (documented)
 - [ ] Query Iceberg from DuckDB to verify the data
 - [ ] Tests for transformation functions
@@ -68,11 +69,13 @@ Goal: the system detects breaking news live and shows it on a dashboard.
 - [ ] DAG: hourly dbt build
 - [ ] DAG: Iceberg maintenance (compaction, expire snapshots, remove orphan files)
 - [ ] DAG: backfill from bronze
+- [ ] DAG: retention (bronze 14 days, silver 90 days), see [ADR-0006](adr/0006-data-scope-and-retention.md)
 
 ## Phase 5: Observability
 - [ ] Prometheus + Grafana in compose
 - [ ] Dashboards: consumer lag, throughput, end-to-end latency, DLQ rate, Spark batch duration
-- [ ] Alert rules (lag too high, producer disconnected)
+- [ ] Disk usage per layer (topics, bronze, silver, gold), used to revisit retention values
+- [ ] Alert rules (lag too high, producer disconnected, disk filling up)
 
 ## Phase 6: Cloud
 - [ ] AWS budget alert before the first `terraform apply`
