@@ -10,5 +10,6 @@ An ADR records one significant decision: the context, what we chose, and the con
 | [0004](0004-codespaces-dev-environment.md) | GitHub Codespaces as the dev environment | Accepted |
 | [0005](0005-cloud-cost-strategy.md) | Near-zero-cost cloud strategy | Accepted |
 | [0006](0006-data-scope-and-retention.md) | Keep everything at ingestion, filter in processing, tiered retention | Accepted |
+| [0007](0007-ingestion-message-contract.md) | Ingestion message contract (key, value, partitions, delivery) | Accepted |
 
 New ADRs: copy [template.md](template.md) and use the next number.

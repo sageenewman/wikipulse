@@ -2,7 +2,7 @@
 
 Status: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` dropped (say why)
 
-**Current phase:** Phase 0: Foundations
+**Current phase:** Phase 1: Ingestion
 **MVP:** end of Phase 3.
 
 ---
@@ -25,18 +25,22 @@ Goal: a repo that opens in Codespaces with one click and has green CI.
 Goal: Wikipedia events flowing into Redpanda reliably.
 
 - [x] Redpanda + Redpanda Console in docker-compose
-- [ ] Topics: `wiki.raw`, `wiki.dlq` with 3-day retention (document the partition count)
-- [ ] Async SSE client with a proper User-Agent
-- [ ] Reconnect with exponential backoff + resume via `Last-Event-ID`
-- [ ] Kafka producer: keying strategy, acks, idempotence, batching (document the choices)
-- [ ] Validation: invalid events go to the DLQ, never crash the producer
-- [ ] Schema Registry: register the event schema (Avro or JSON Schema, decided in an ADR)
+- [x] Topics: `wiki.raw` (3 partitions), `wiki.dlq` (1 partition), 3-day retention
+- [x] Async SSE client with a proper User-Agent
+- [x] Reconnect with exponential backoff, resuming via `Last-Event-ID` held in memory
+- [ ] Resume after a process restart, from the `last_event_id` header of the last message in Kafka
+- [ ] Test reconnect behaviour (drop the connection, check for gaps and duplicates)
+- [x] Kafka producer: keying, idempotence, batching ([ADR-0007](adr/0007-ingestion-message-contract.md))
+- [x] Validation: invalid events go to the DLQ, never crash the producer
+- [ ] Run the producer as a container in docker-compose
+- [ ] Schema Registry: register a JSON Schema for the raw events (messages stay raw JSON)
 - [ ] Recorder: save N minutes of live events to `data/samples/*.jsonl`
 - [ ] Record 24 hours and re-measure the numbers in [DATA_SOURCE.md](DATA_SOURCE.md)
 - [ ] Replay mode: produce from a sample file (with optional speed-up)
 - [ ] Prometheus metrics: events/sec, reconnects, DLQ count
-- [ ] Unit tests (parsing, validation) + integration test with Testcontainers
-- [ ] Graceful shutdown (flush the producer on SIGTERM)
+- [x] Unit tests (validation, keying, routing)
+- [ ] Integration test with Testcontainers
+- [x] Graceful shutdown (flush the producer on SIGINT/SIGTERM)
 
 ## Phase 2: Lakehouse (bronze & silver)
 Goal: events land in Iceberg, clean and deduplicated.
