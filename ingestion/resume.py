@@ -91,7 +91,10 @@ def _read_one_per_partition(
 
 
 def _event_id(message: Message) -> str:
-    for key, value in message.headers() or []:
+    headers = message.headers()
+    if not isinstance(headers, list):
+        return ""
+    for key, value in headers:
         if key == HEADER and isinstance(value, bytes):
             return value.decode()
     return ""

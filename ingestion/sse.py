@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 
 import httpx
@@ -26,7 +26,7 @@ async def stream_events(
     *,
     start_event_id: str = "",
     transport: httpx.AsyncBaseTransport | None = None,
-) -> AsyncIterator[StreamMessage]:
+) -> AsyncGenerator[StreamMessage, None]:
     """Yield stream messages forever, reconnecting when the connection drops.
 
     Every (re)connect resumes from the last message seen, or from `start_event_id`
