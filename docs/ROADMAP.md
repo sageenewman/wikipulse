@@ -48,6 +48,33 @@ Goal: Wikipedia events flowing into Redpanda reliably.
 - [ ] Integration test with Testcontainers
 - [x] Graceful shutdown (flush the producer on SIGINT/SIGTERM)
 
+## Review findings
+Problems found by the code reviewer in merged code (reviews of #5 and #7). Every finding is listed here so that none is forgotten.
+
+Priority: **blocker** = wrong behaviour or data loss, fixed before anything else · **important** = can damage data or hide a failure, fixed before Phase 2 · **low** = no wrong result today, fixed when the code is next touched.
+
+### Blocker
+- [ ] A replay moves the live producer's resume point. Replayed messages carry the recording's stream position in the `last_event_id` header, and the live producer resumes from the newest header in Kafka. After a replay, the next live start skips data or re-ingests old history (`ingestion/main.py`, `ingestion/resume.py`)
+
+### Important
+- [ ] A recording can end early and the log does not say why it stopped: the idle timer starts before the first message arrives, and no stop reason is logged
+- [ ] An event whose `meta.dt` has no timezone crashes recording with `--to` and paced replay
+- [ ] An unpaced replay ignores Ctrl+C and SIGTERM until the whole file is published
+- [ ] Part files left by a killed recording are merged into the next recording with the same name
+- [ ] `--seconds` never stops a recording while no events arrive; the recorder reads the real clock, so its time-based stops have no tests
+- [ ] An event with no readable time is moved to the start of the recording instead of keeping its place
+- [ ] The reviewer agent says little about code structure (section 4 of the review guide); check on the next two reviews, then adjust its definition
+
+### Low
+- [ ] `make check-gaps` crashes on a forwarded event that has no upstream offset (the broken-events sample)
+- [ ] Tests for the command-line options (`--from`, `--to`, `--since-minutes`) and rejection of conflicting ones
+- [ ] A replay that ends with unsent or failed messages should exit with a non-zero code
+- [ ] Close the stream client when a recording fails (`source.aclose()` in a `finally`)
+- [ ] Recordings are described as "ordered by event time"; within one upstream topic they keep arrival order. Correct the wording
+- [ ] Re-run the live verification of #5 on the merged code and correct its description; the published figures predate the recorder rewrite
+- [ ] [DATA_SOURCE.md](DATA_SOURCE.md) still lists canary events as an open question, although finding 15 answers it
+- [ ] The dev machine size differs between [CONTRIBUTING.md](../CONTRIBUTING.md), ADR-0004 (4-core / 16GB) and the dev container (2-core)
+
 ## Quality pass (before Phase 2)
 Goal: the code meets [ENGINEERING.md](ENGINEERING.md), and the checks run by themselves.
 
@@ -62,7 +89,7 @@ Goal: the code meets [ENGINEERING.md](ENGINEERING.md), and the checks run by the
 - [ ] Split the recorder: stop policy, part writing and merging
 - [ ] Integration tests against a real broker for `resume.py` and `check_gaps.py`
 - [ ] Decide what happens when a delivery to Kafka fails for good (today it is only counted and logged)
-- [ ] Automated reviewer that applies [CODE_REVIEW.md](CODE_REVIEW.md) to every PR
+- [~] Automated reviewer that applies [CODE_REVIEW.md](CODE_REVIEW.md) to every PR (the reviewer agent exists and is started by hand; running it automatically is still open)
 
 ## Phase 2: Lakehouse (bronze & silver)
 Goal: events land in Iceberg, clean and deduplicated.

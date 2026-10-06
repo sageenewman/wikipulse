@@ -27,6 +27,7 @@ Kafka (Redpanda) · Spark Structured Streaming · Apache Iceberg · dbt · DuckD
 - [Engineering guidelines](docs/ENGINEERING.md) and [code review guide](docs/CODE_REVIEW.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Contributing](CONTRIBUTING.md)
+- [How AI is used in this repository](CLAUDE.md): the project is built with Claude Code under the owner's direction, and every pull request is examined by a [read-only reviewer agent](.claude/agents/code-reviewer.md) before the owner decides on the merge
 
 ## Quickstart
 
