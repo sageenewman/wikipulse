@@ -73,7 +73,7 @@ Details: [docs/DATA_SOURCE.md](docs/DATA_SOURCE.md).
 - Wikimedia **requires a descriptive `User-Agent`** header with contact info, or requests may be blocked.
 - To resume after a disconnect, send the **`Last-Event-ID`** header. Delivery is at-least-once, so we **deduplicate downstream by `meta.id`**.
 - Event schema: https://schema.wikimedia.org/#!/primary/jsonschema/mediawiki/recentchange
-- A large share of events are from bots and from Wikidata. Keep the `bot` flag and the `wiki` field; don't drop them at ingestion.
+- Most events are not human edits to Wikipedia articles: about half the stream comes from Wikimedia Commons, and bots and Wikidata add a large share. Keep the `bot` flag and the `wiki` field; don't drop them at ingestion.
 
 ## Engineering conventions
 
@@ -91,7 +91,7 @@ Details: [docs/DATA_SOURCE.md](docs/DATA_SOURCE.md).
 - `main` is always working. All work happens on branches and is merged through a PR.
 - Branch names: `feat/<short-name>`, `fix/<short-name>`, `chore/<short-name>`, `docs/<short-name>`, `infra/<short-name>`.
 - Commits follow **Conventional Commits**: `feat(ingestion): add SSE reconnect with Last-Event-ID`.
-- The PR description explains why the change exists and what changed.
+- The PR description answers four questions: why the change exists, what changed, how it was verified, and what is not included ([ENGINEERING.md](docs/ENGINEERING.md), section 7).
 - Never commit or push without the owner's go-ahead.
 - **Never merge a PR yourself.** Open the PR, explain it, and wait for the owner to review and say "merge".
 
@@ -99,7 +99,7 @@ Details: [docs/DATA_SOURCE.md](docs/DATA_SOURCE.md).
 
 Reviews follow [docs/CODE_REVIEW.md](docs/CODE_REVIEW.md). Write code expecting an independent review.
 
-1. Claude opens the PR with the usual summary.
+1. Claude opens the PR with a description that answers the four questions above.
 2. The reviewer agent ([.claude/agents/code-reviewer.md](.claude/agents/code-reviewer.md)) examines it and only writes findings. It is read-only and never changes code.
 3. Claude fixes, and posts a "changes after review" summary using the template in CODE_REVIEW.md.
 4. The owner alone approves the merge, after seeing both summaries.
@@ -110,8 +110,12 @@ Run inside the codespace. `make help` lists them all.
 
 | Command | What it does |
 |---|---|
-| `make up` / `make down` | Start / stop the stack (Redpanda + Console) |
+| `make up` / `make down` | Start the stack (Redpanda + Console) and create the topics / stop it |
 | `make ps` / `make logs` | Service status / logs |
 | `make clean` | Stop and delete data volumes |
+| `make topics` | Create the Kafka topics if they do not exist |
+| `make ingest` | Run the live producer: Wikimedia stream to Kafka |
+| `make record` / `make replay` | Save the stream to a file / publish a recording to Kafka |
+| `make check-gaps` | Check the raw topic for lost or duplicated events |
 | `make sync` | Install Python dependencies with uv |
 | `make lint` / `make fmt` / `make typecheck` / `make test` | ruff / ruff format / mypy / pytest |

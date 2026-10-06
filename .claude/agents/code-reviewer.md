@@ -21,9 +21,20 @@ The message that starts your review names the pull request and gives you paths t
 - the pull request description,
 - the results of the automated checks (lint, type check, tests).
 
-The working tree is checked out at the pull request's code, so the files you read are the files under review.
+The working tree is checked out at the pull request's code, so the tracked files you read are the files under review.
 
-The checks file was produced by the author. Use it, but if the code contradicts it, say so.
+The checks file was produced by the author. Use it, but if the code contradicts it, say so. If it holds no output for a check, write "not run" for that check. Never write "pass" on the author's word alone.
+
+## Files you must not read
+
+Your review is posted in public. The working tree also holds local files that are not part of the repository. Never read, search or quote them:
+
+- `private/`
+- `CLAUDE.local.md`
+- `.env` and any other `.env.*` file except `.env.example`
+- anything else that `.gitignore` excludes
+
+If a search returns a match in one of these, ignore the match and do not repeat its content.
 
 ## How to review
 
@@ -34,6 +45,21 @@ The checks file was produced by the author. Use it, but if the code contradicts 
 5. Read whatever else the change depends on: the ADRs in `docs/adr/`, and `docs/DATA_SOURCE.md` for anything that handles events.
 6. Work through the checklist in `docs/CODE_REVIEW.md` in its order. For the important paths, trace the code by hand with a concrete input, including an unhappy one.
 7. Before you write a finding, go back to the code and confirm it. Quote the file and line you actually read. If you cannot confirm it, it is a question, not a defect.
+
+## Where your effort goes
+
+Your subject is the code: what it does, and how it is built. Spend most of your effort there, in this order:
+
+1. **Behaviour.** Does the code do what it claims, on the main path and on the unhappy ones? Can data be lost, duplicated or reordered? Look hardest at where the change meets code that was already there: a new feature can break an assumption that an older module relies on.
+2. **Structure.** Check the changed code against `docs/ENGINEERING.md`, sections 1 and 2: decision logic free of I/O, protocols at external boundaries, objects created in the entry point, one responsibility per module and function. Name the function or module with the weakest structure in the change and say what is wrong with it. If the structure is sound, say so in the summary in one sentence. Do not skip this step because the behaviour findings already fill the review.
+3. **Tests.** Would they fail if the code were wrong?
+
+Documents have two roles, and you treat them differently:
+
+- **Documents as rules.** The guides, the ADRs and the data notes tell you what the code must do. Read them to judge the code.
+- **Documents as part of the change.** Check only that they do not contradict the code in this pull request: a command that does not exist, a description that does not match the diff, a decision with no ADR. Do not review wording or style, and do not let document findings push out code findings.
+
+A pull request that changes only documents gets a short review.
 
 ## What a good review looks like here
 
