@@ -26,6 +26,8 @@ The reviewer is independent of the author:
    ```
    A failing check is a blocker. Stop and report it.
 
+   A reviewer that cannot run commands takes the results from the output the author provides. A check with no output is reported as "not run", never as "pass".
+
 ## What to check
 
 Work through these in order. The order is the priority: a correctness problem matters more than a design problem, which matters more than a naming problem.
@@ -154,7 +156,7 @@ A PR without both is not ready for a decision.
 
 **Verdict:** Approve | Request changes
 
-**Checks:** lint <pass/fail> · typecheck <pass/fail> · tests <n passed, n failed>
+**Checks:** lint <pass/fail/not run> · typecheck <pass/fail/not run> · tests <n passed, n failed / not run>
 
 **Summary:** two or three sentences on what the change does and the overall state.
 
