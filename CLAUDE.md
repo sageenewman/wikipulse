@@ -115,7 +115,7 @@ Run inside the codespace. `make help` lists them all.
 | `make clean` | Stop and delete data volumes |
 | `make topics` | Create the Kafka topics if they do not exist |
 | `make ingest` | Run the live producer: Wikimedia stream to Kafka |
-| `make record` / `make replay` | Save the stream to a file / publish a recording to Kafka |
-| `make check-gaps` | Check the raw topic for lost or duplicated events |
+| `make record` / `make replay` | Save the stream to a file / publish a recording to the replay topics |
+| `make check-gaps` | Check a topic for lost or duplicated events (the live raw topic by default) |
 | `make sync` | Install Python dependencies with uv |
 | `make lint` / `make fmt` / `make typecheck` / `make test` | ruff / ruff format / mypy / pytest |
