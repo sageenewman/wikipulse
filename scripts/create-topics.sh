@@ -22,3 +22,8 @@ ensure() {
 ensure wiki.raw 3 $((3 * DAY_MS))
 # Dead-lettered events are evidence for debugging, so they are kept longer.
 ensure wiki.dlq 1 $((14 * DAY_MS))
+# Replays write here, never to the live topics (docs/adr/0008-replay-topics.md).
+# Same partition count as the live topics, so a replay spreads keys the same way.
+# Test data, so it is kept for one day only.
+ensure wiki.replay 3 $((1 * DAY_MS))
+ensure wiki.replay.dlq 1 $((1 * DAY_MS))
