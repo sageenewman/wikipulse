@@ -76,6 +76,7 @@ When something happens in the world (an earthquake, a celebrity death, an electi
 | `wiki.raw` | Raw events from the producer |
 | `wiki.alerts` | Detected spikes |
 | `wiki.dlq` | Events that failed validation |
+| `wiki.replay`, `wiki.replay.dlq` | The same two roles for replayed recordings. Test data never enters the live topics ([ADR-0008](adr/0008-replay-topics.md)) |
 
 ### Data scope and retention
 
@@ -89,6 +90,7 @@ Decided in [ADR-0006](adr/0006-data-scope-and-retention.md).
 |---|---|---|
 | `wiki.raw` topic | 3 days | Buffer for consumer downtime and short replays |
 | `wiki.dlq` topic | 14 days | Evidence for debugging. Drops to 7 days once the DLQ triage agent runs |
+| `wiki.replay` topics | 1 day | Test data, can always be replayed again |
 | Bronze | 14 days | Window for reprocessing after a bug |
 | Silver | 90 days | History for baselines and analysis |
 | Gold | Unlimited | Small aggregates |

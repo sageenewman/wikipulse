@@ -1,6 +1,6 @@
 # ADR-0007: Ingestion message contract
 
-- **Status:** Accepted
+- **Status:** Accepted. [ADR-0008](0008-replay-topics.md) adds the rule this design depends on: the live topics have one writer.
 - **Date:** 2026-10-04
 
 ## Context

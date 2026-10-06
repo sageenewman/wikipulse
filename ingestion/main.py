@@ -2,7 +2,7 @@
 
 python -m ingestion                      live stream -> Kafka
 python -m ingestion record --out FILE    live stream -> file
-python -m ingestion replay FILE          file -> Kafka
+python -m ingestion replay FILE          file -> Kafka (the replay topics)
 """
 
 import argparse
@@ -16,7 +16,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from ingestion import recording
-from ingestion.config import Settings
+from ingestion.config import Settings, Topics
 from ingestion.events import Invalid, Skipped, Valid, classify
 from ingestion.log import configure_logging
 from ingestion.publisher import Headers, Publisher
@@ -27,7 +27,7 @@ log = logging.getLogger("ingestion")
 
 
 def handle(
-    message: StreamMessage, publisher: Publisher, settings: Settings, stats: Counter[str]
+    message: StreamMessage, publisher: Publisher, topics: Topics, stats: Counter[str]
 ) -> None:
     """Route one stream message: raw topic, dead-letter topic, or drop."""
     verdict = classify(message.data)
@@ -38,12 +38,10 @@ def handle(
 
     match verdict:
         case Valid(key=key):
-            publisher.publish(settings.raw_topic, value, key, headers)
+            publisher.publish(topics.raw, value, key, headers)
             stats["forwarded"] += 1
         case Invalid(reason=reason):
-            publisher.publish(
-                settings.dlq_topic, value, None, [*headers, ("error", reason.encode())]
-            )
+            publisher.publish(topics.dlq, value, None, [*headers, ("error", reason.encode())])
             stats["dead_lettered"] += 1
         case Skipped():
             stats["skipped"] += 1
@@ -52,12 +50,13 @@ def handle(
 async def pump(
     source: AsyncIterator[StreamMessage],
     settings: Settings,
+    topics: Topics,
     publisher: Publisher,
     stats: Counter[str],
 ) -> None:
     last_report = time.monotonic()
     async for message in source:
-        handle(message, publisher, settings, stats)
+        handle(message, publisher, topics, stats)
         now = time.monotonic()
         if now - last_report >= settings.stats_interval_seconds:
             report(stats, publisher)
@@ -71,8 +70,10 @@ def report(stats: Counter[str], publisher: Publisher) -> None:
     )
 
 
-async def publish_from(source: AsyncIterator[StreamMessage], settings: Settings) -> None:
-    """Publish every message from `source` until it ends or the process is told to stop."""
+async def publish_from(
+    source: AsyncIterator[StreamMessage], settings: Settings, topics: Topics
+) -> None:
+    """Publish every message from `source` to `topics` until it ends or is told to stop."""
     publisher = Publisher(settings)
     stats: Counter[str] = Counter()
 
@@ -82,7 +83,7 @@ async def publish_from(source: AsyncIterator[StreamMessage], settings: Settings)
         loop.add_signal_handler(sig, stop.set)
 
     started = time.monotonic()
-    pump_task = asyncio.create_task(pump(source, settings, publisher, stats))
+    pump_task = asyncio.create_task(pump(source, settings, topics, publisher, stats))
     stop_task = asyncio.create_task(stop.wait())
     try:
         await asyncio.wait({pump_task, stop_task}, return_when=asyncio.FIRST_COMPLETED)
@@ -117,15 +118,20 @@ async def run_live(settings: Settings) -> None:
             "resume_from": start_event_id or "now",
         },
     )
-    await publish_from(stream_events(settings, start_event_id=start_event_id), settings)
+    await publish_from(
+        stream_events(settings, start_event_id=start_event_id), settings, settings.live_topics
+    )
 
 
 async def run_replay(settings: Settings, path: Path, speed: float) -> None:
+    # A replay has its own topics. Its messages carry the recording's stream
+    # position, and in the live topics the live producer would resume from it.
+    topics = settings.replay_topics
     log.info(
         "replay starting",
-        extra={"source": str(path), "raw_topic": settings.raw_topic, "speed": speed or "max"},
+        extra={"source": str(path), "raw_topic": topics.raw, "speed": speed or "max"},
     )
-    await publish_from(recording.replay(path, speed=speed), settings)
+    await publish_from(recording.replay(path, speed=speed), settings, topics)
 
 
 async def run_record(
