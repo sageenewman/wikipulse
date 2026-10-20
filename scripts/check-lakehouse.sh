@@ -7,7 +7,8 @@
 # x-amz-content-sha256 header that S3 requires.
 set -eu
 
-CATALOG=http://iceberg-rest:8181
+CATALOG=http://lakekeeper:8181/catalog
+WAREHOUSE=wikipulse
 STORAGE=http://localhost:9000
 KEY=$RUSTFS_ACCESS_KEY
 SECRET=$RUSTFS_SECRET_KEY
@@ -16,11 +17,18 @@ TABLE=check_$(date +%s)
 
 step() { echo "--> $1"; }
 
-step "catalog answers at $CATALOG"
-curl -sS --fail -o /dev/null "$CATALOG/v1/config"
+step "catalog serves warehouse $WAREHOUSE"
+# The catalog's config names the URL prefix of the warehouse; every table path uses it.
+config=$(curl -sS --fail "$CATALOG/v1/config?warehouse=$WAREHOUSE")
+prefix=$(printf '%s' "$config" | sed -n 's/.*"prefix" *: *"\([^"]*\)".*/\1/p')
+if [ -z "$prefix" ]; then
+  echo "FAIL: no prefix in the catalog's config: $config" >&2
+  exit 1
+fi
+TABLES="$CATALOG/v1/$prefix/namespaces/$NAMESPACE/tables"
 
 step "namespace $NAMESPACE exists"
-status=$(curl -sS -o /dev/null -w '%{http_code}' -X POST "$CATALOG/v1/namespaces" \
+status=$(curl -sS -o /dev/null -w '%{http_code}' -X POST "$CATALOG/v1/$prefix/namespaces" \
   -H 'Content-Type: application/json' -d "{\"namespace\": [\"$NAMESPACE\"]}")
 # 200: created now. 409: it was already there.
 case "$status" in
@@ -29,8 +37,7 @@ case "$status" in
 esac
 
 drop_table() {
-  curl -sS --fail -o /dev/null -X DELETE \
-    "$CATALOG/v1/namespaces/$NAMESPACE/tables/$TABLE?purgeRequested=true"
+  curl -sS --fail -o /dev/null -X DELETE "$TABLES/$TABLE?purgeRequested=true"
 }
 
 # From here on a table may exist. If any step fails, drop it on the way out, so a failed
@@ -38,7 +45,7 @@ drop_table() {
 trap 'echo "--> cleaning up after the failure"; drop_table || true' EXIT
 
 step "create table $NAMESPACE.$TABLE"
-response=$(curl -sS --fail -X POST "$CATALOG/v1/namespaces/$NAMESPACE/tables" \
+response=$(curl -sS --fail -X POST "$TABLES" \
   -H 'Content-Type: application/json' -d "{
     \"name\": \"$TABLE\",
     \"schema\": {\"type\": \"struct\", \"schema-id\": 0, \"fields\": [
@@ -46,8 +53,7 @@ response=$(curl -sS --fail -X POST "$CATALOG/v1/namespaces/$NAMESPACE/tables" \
     ]}
   }")
 
-# The catalog answers with the location of the table's first metadata file,
-# for example s3://warehouse/smoke_check/check_1/metadata/00000-<uuid>.metadata.json
+# The catalog answers with the location of the table's first metadata file.
 location=$(printf '%s' "$response" | sed -n 's/.*"metadata-location" *: *"\([^"]*\)".*/\1/p')
 if [ -z "$location" ]; then
   echo "FAIL: no metadata-location in the catalog's answer: $response" >&2
@@ -72,10 +78,15 @@ step "drop the table and its files"
 drop_table
 trap - EXIT
 
+# Lakekeeper deletes a purged table's files in a background task, so allow it a moment.
 step "metadata file is gone from object storage"
-status=$(storage_status)
+for _ in $(seq 30); do
+  status=$(storage_status)
+  [ "$status" = 404 ] && break
+  sleep 1
+done
 if [ "$status" != 404 ]; then
-  echo "FAIL: the table was dropped but its metadata file is still in storage (HTTP $status)" >&2
+  echo "FAIL: 30s after the drop the metadata file is still in storage (HTTP $status)" >&2
   exit 1
 fi
 

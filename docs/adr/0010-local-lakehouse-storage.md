@@ -1,5 +1,7 @@
 # ADR-0010: RustFS and the reference REST catalog for the local lakehouse
 
+> The catalog part of this decision is replaced by [ADR-0012](0012-lakekeeper-catalog.md) (Lakekeeper on Postgres), after the reference catalog's SQLite failed a commit under concurrent requests. RustFS stays the object store.
+
 - **Status:** Accepted
 - **Date:** 2026-10-20
 

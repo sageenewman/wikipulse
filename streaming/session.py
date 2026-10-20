@@ -18,11 +18,11 @@ def build_session(app_name: str, settings: LakehouseSettings) -> SparkSession:
         .config(catalog, "org.apache.iceberg.spark.SparkCatalog")
         .config(f"{catalog}.type", "rest")
         .config(f"{catalog}.uri", settings.iceberg_catalog_uri)
-        # Table files are read and written by Iceberg's own S3 client. Credentials and
-        # region come from the standard AWS environment variables.
+        .config(f"{catalog}.warehouse", settings.iceberg_warehouse)
+        # Table files are read and written by Iceberg's own S3 client. It has no storage
+        # credentials: the catalog returns the storage endpoint with each table and signs
+        # each request (remote signing, ADR-0012).
         .config(f"{catalog}.io-impl", "org.apache.iceberg.aws.s3.S3FileIO")
-        .config(f"{catalog}.s3.endpoint", settings.s3_endpoint)
-        .config(f"{catalog}.s3.path-style-access", "true")
         .config("spark.sql.session.timeZone", "UTC")
         # One small machine: the default of 200 shuffle partitions is pure overhead.
         .config("spark.sql.shuffle.partitions", "4")

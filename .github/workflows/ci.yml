@@ -162,7 +162,7 @@ jobs:
 
       - name: Show service logs
         if: ${{ failure() }}
-        run: docker compose --profile lakehouse logs --tail=100 object-store iceberg-rest
+        run: docker compose --profile lakehouse logs --tail=100 object-store catalog-db catalog-migrate lakekeeper
 
       - name: Stop the stack
         if: ${{ always() }}

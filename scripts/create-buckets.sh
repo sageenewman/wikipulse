@@ -21,5 +21,6 @@ ensure() {
   fi
 }
 
-# Every Iceberg table lives under this bucket (CATALOG_WAREHOUSE in docker-compose.yml).
+# Every Iceberg table lives under this bucket (the warehouse's storage profile in
+# scripts/create-warehouse.sh).
 ensure warehouse

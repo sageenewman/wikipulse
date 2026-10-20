@@ -56,7 +56,7 @@ services:
     mem_limit: 256m
 
   # --- Lakehouse (profile "lakehouse"): object storage + Iceberg catalog -----------------
-  # Same pair as Apache Iceberg's own quickstarts and tests. See docs/adr/0010-local-lakehouse-storage.md
+  # Storage: docs/adr/0010-local-lakehouse-storage.md. Catalog: docs/adr/0012-lakekeeper-catalog.md
   # Images are pinned by digest as well as tag: a tag can be moved to different content, a digest cannot.
 
   # S3-compatible object storage. Holds the table files: Parquet data and Iceberg metadata.
@@ -79,28 +79,62 @@ services:
       retries: 10
     mem_limit: 512m
 
-  # Iceberg REST catalog (the Iceberg project's reference implementation). It records which
-  # tables exist and where each table's current metadata file is. Committing a write to a
-  # table means swapping that pointer, which is what makes Iceberg writes atomic.
-  iceberg-rest:
-    image: apache/iceberg-rest-fixture:1.10.1@sha256:f7d679d30ac9c640bdeb2c015dff533cd3c8f1c7d491ebcb5d436f9a42db1d6f
+  # The catalog's database: which tables exist and where each table's current metadata file
+  # is. Committing a write to a table means swapping that pointer in one transaction, which
+  # is what makes Iceberg writes atomic.
+  catalog-db:
+    image: postgres:17.11-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
     profiles: [lakehouse]
     environment:
-      # The catalog's own state goes to a SQLite file on a volume. The image default is /tmp,
-      # which is lost when the container is recreated, while the data files would remain.
-      CATALOG_URI: jdbc:sqlite:/home/iceberg/iceberg_catalog.db
-      CATALOG_WAREHOUSE: s3://warehouse/
-      CATALOG_IO__IMPL: org.apache.iceberg.aws.s3.S3FileIO
-      CATALOG_S3_ENDPOINT: http://object-store:9000
-      CATALOG_S3_PATH__STYLE__ACCESS: "true"
-      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-wikipulse}
-      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-wikipulse-dev-secret}
-      AWS_REGION: us-east-1
-    ports:
-      - "8181:8181" # Iceberg REST API
+      POSTGRES_USER: lakekeeper
+      POSTGRES_PASSWORD: ${CATALOG_DB_PASSWORD:-lakekeeper-dev-password}
+      POSTGRES_DB: lakekeeper
     volumes:
-      - iceberg-catalog:/home/iceberg
+      - catalog-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lakekeeper -d lakekeeper"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+    mem_limit: 256m
+
+  # Creates or upgrades Lakekeeper's tables in the database, then exits.
+  catalog-migrate:
+    image: quay.io/lakekeeper/catalog:v0.14.1@sha256:7c5d6b178a1b5ae230bd7d3e7a09da4704ce58fafc66a8b90c3b6edb69ba9817
+    profiles: [lakehouse]
+    command: ["migrate"]
+    environment: &lakekeeper-env
+      LAKEKEEPER__PG_DATABASE_URL_READ: postgresql://lakekeeper:${CATALOG_DB_PASSWORD:-lakekeeper-dev-password}@catalog-db:5432/lakekeeper
+      LAKEKEEPER__PG_DATABASE_URL_WRITE: postgresql://lakekeeper:${CATALOG_DB_PASSWORD:-lakekeeper-dev-password}@catalog-db:5432/lakekeeper
+      # Encrypts the storage credentials Lakekeeper keeps in the database.
+      LAKEKEEPER__PG_ENCRYPTION_KEY: ${CATALOG_ENCRYPTION_KEY:-wikipulse-dev-encryption-key}
     depends_on:
+      catalog-db:
+        condition: service_healthy
+    restart: "no"
+    mem_limit: 256m
+
+  # The Iceberg REST catalog (Lakekeeper). Clients get no storage credentials: before each
+  # S3 request they ask Lakekeeper to sign it, and it signs only requests inside the
+  # table's location (remote signing). Web UI at http://localhost:8181/ui
+  lakekeeper:
+    image: quay.io/lakekeeper/catalog:v0.14.1@sha256:7c5d6b178a1b5ae230bd7d3e7a09da4704ce58fafc66a8b90c3b6edb69ba9817
+    profiles: [lakehouse]
+    command: ["serve"]
+    environment:
+      <<: *lakekeeper-env
+      # The UI would otherwise load a third-party survey script.
+      LAKEKEEPER__UI__ENABLE_SURVEYS: "false"
+    ports:
+      - "8181:8181" # Iceberg REST API (/catalog), management API and UI (/ui)
+    healthcheck:
+      test: ["CMD", "/home/nonroot/lakekeeper", "healthcheck"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+    depends_on:
+      catalog-migrate:
+        condition: service_completed_successfully
       object-store:
         condition: service_healthy
     mem_limit: 512m
@@ -118,10 +152,9 @@ services:
     profiles: [streaming]
     environment: &spark-env
       KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
-      ICEBERG_CATALOG_URI: http://iceberg-rest:8181
-      S3_ENDPOINT: http://object-store:9000
-      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-wikipulse}
-      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-wikipulse-dev-secret}
+      ICEBERG_CATALOG_URI: http://lakekeeper:8181/catalog
+      # No storage credentials: every S3 request is signed by the catalog (remote signing).
+      # The AWS SDK still needs a region to start; the catalog sends the real settings.
       AWS_REGION: us-east-1
       BRONZE_TRIGGER_SECONDS: ${BRONZE_TRIGGER_SECONDS:-60}
     volumes:
@@ -131,7 +164,7 @@ services:
     depends_on:
       redpanda:
         condition: service_healthy
-      iceberg-rest:
+      lakekeeper:
         condition: service_healthy
     # The JVM heap is 1g (--driver-memory in streaming/Dockerfile); the rest is for the
     # JVM's own overhead and the Python process.
@@ -151,7 +184,7 @@ services:
 volumes:
   redpanda-data:
   object-store-data:
-  iceberg-catalog:
+  catalog-db:
   # Spark's record of what each job has read and committed. It belongs with the tables:
   # `make clean` deletes both, never one without the other.
   spark-checkpoints:
