@@ -282,6 +282,20 @@ jobs:
             echo "::error::The automated review failed (session result: $outcome). Add the review label to run it again."
             exit 1
           fi
+          # A later review finds this one by its heading ("Collect the pull request"), so the
+          # comment must start with it. The agent is told to write nothing before the heading
+          # but does not always comply; anything before it is dropped here.
+          if grep -q '^## Review of' .review-input/review.md; then
+            sed -n '/^## Review of/,$p' .review-input/review.md > .review-input/review.tmp
+            mv .review-input/review.tmp .review-input/review.md
+          else
+            # Said on the PR itself as well as in the run log, which nobody opens for a green job.
+            echo "::warning::The review has no '## Review of' heading, so a later review will not find it."
+            {
+              echo
+              echo "> ⚠️ This review has no \`## Review of\` heading, so a later review will not see it."
+            } >> .review-input/review.md
+          fi
           {
             echo
             echo "---"
