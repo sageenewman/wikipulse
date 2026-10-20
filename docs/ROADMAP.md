@@ -82,6 +82,7 @@ Goal: the code meets [ENGINEERING.md](ENGINEERING.md), and the checks run by the
 - [x] Code review guide ([CODE_REVIEW.md](CODE_REVIEW.md))
 - [x] GitHub Actions CI on every PR: lint, type-check, tests
 - [ ] Make the CI checks required before merging (branch protection on `main`)
+- [ ] Move the CI result parsing (summary table, annotations) from inline bash into a tested script under `scripts/`. Its failure paths have not run yet (review of #9)
 - [ ] Complexity and function-length limits in `ruff`
 - [ ] Test coverage measured, with a minimum of 85% in CI
 - [ ] `MessageSink` protocol for the Kafka publisher; remove `cast` from the tests

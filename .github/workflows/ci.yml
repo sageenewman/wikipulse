@@ -22,6 +22,8 @@ defaults:
 jobs:
   checks:
     name: Lint, types, tests
+    # Other labels change nothing in the code, and a new run would cancel the one in progress.
+    if: github.event.action != 'labeled' || github.event.label.name == 'review'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     concurrency:
@@ -71,7 +73,8 @@ jobs:
         run: |
           # The plain summary is for the reviewer agent.
           {
-            echo "Produced by GitHub Actions run ${{ github.run_id }} on commit ${{ github.sha }}."
+            # On a PR, github.sha is a temporary merge commit; name the PR's own commit too.
+            echo "Produced by GitHub Actions run ${{ github.run_id }} on commit ${{ github.event.pull_request.head.sha || github.sha }} (checked out as ${{ github.sha }})."
             echo "lint: $LINT"
             echo "typecheck: $TYPECHECK"
             echo "tests: $TEST"
@@ -235,9 +238,10 @@ jobs:
           if [ "$outcome" = success ]; then
             jq -r '[.[] | select(.type == "result")] | last | .result // ""' "$SESSION" > .review-input/review.md
           fi
+          # A failed review fails this job (red on the PR) and posts nothing.
           if [ ! -s .review-input/review.md ]; then
-            echo "The automated review failed (session result: $outcome). Add the \`review\` label to run it again." \
-              > .review-input/review.md
+            echo "::error::The automated review failed (session result: $outcome). Add the review label to run it again."
+            exit 1
           fi
           {
             echo

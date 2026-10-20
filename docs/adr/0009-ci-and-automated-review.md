@@ -35,8 +35,8 @@ Authentication and permissions:
 - ✅ A pull request cannot look green without lint, types and tests passing on GitHub's machines.
 - ✅ The review always runs, and it reports check results that the author did not produce.
 - ✅ No per-use bill: GitHub Actions is free on standard runners for public repositories, and the review uses the subscription.
-- ✅ The action takes the `.claude/` folder from the base branch, so a pull request cannot change its own reviewer.
-- ⚠️ Every push uses the owner's subscription, including a push that only fixes a typo. When the limit is reached, the review posts that it failed, and is run again later with the label.
+- ⚠️ A pull request can change parts of its own review. The action takes `.claude/` and `CLAUDE.md` from the base branch, so the agent's definition comes from `main`. But the workflow file and `docs/CODE_REVIEW.md` come from the pull request, so a pull request could give the reviewer more tools or a different procedure for its own review. Fork PRs are skipped, so only people with write access to the repository can do this. Protecting those files (CODEOWNERS or a ruleset) is the fix if the repository gets more writers.
+- ⚠️ Every push uses the owner's subscription, including a push that only fixes a typo. When the limit is reached, the review job fails (red on the pull request, no comment), and is run again later with the label.
 - ⚠️ A change to the reviewer agent takes effect only after it is merged, since the pull request is reviewed by the agent on the base branch.
 - ⚠️ Pull requests from forks get no review: GitHub does not pass secrets to them. This is correct for a public repository. A contributor's PR would be reviewed by hand.
 - ⚠️ The subscription token is tied to one person's account. If it expires or the subscription ends, reviews stop until it is replaced.
