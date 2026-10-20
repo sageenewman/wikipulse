@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help up down ps logs clean topics lakehouse buckets check-lakehouse bronze check-bronze test-spark ingest record replay check-gaps sync lint fmt typecheck test
+.PHONY: help up down ps logs clean topics lakehouse buckets warehouse check-lakehouse bronze check-bronze test-spark ingest record replay check-gaps sync lint fmt typecheck test
 
 # Every profile, so that down and clean also stop the optional services.
 ALL_PROFILES := --profile lakehouse --profile streaming
@@ -29,12 +29,16 @@ clean: ## Stop the stack and delete its data volumes (Kafka topics and lakehouse
 topics: ## Create the Kafka topics if they do not exist
 	docker compose exec -T redpanda sh -s < scripts/create-topics.sh
 
-lakehouse: ## Start object storage and the Iceberg catalog, and create the buckets
+lakehouse: ## Start object storage and the Iceberg catalog (Lakekeeper), and create the bucket and warehouse
 	docker compose --profile lakehouse up -d --wait
 	$(MAKE) buckets
+	$(MAKE) warehouse
 
 buckets: ## Create the object storage buckets if they do not exist
 	docker compose exec -T object-store sh -s < scripts/create-buckets.sh
+
+warehouse: ## Bootstrap the catalog and create the Lakekeeper warehouse if they do not exist
+	docker compose exec -T object-store sh -s < scripts/create-warehouse.sh
 
 check-lakehouse: ## Create a test table through the catalog and check its files reach storage
 	docker compose exec -T object-store sh -s < scripts/check-lakehouse.sh

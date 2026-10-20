@@ -13,13 +13,18 @@ LIVE_BRONZE_TABLE = f"{CATALOG}.bronze.recentchange"
 
 
 class LakehouseSettings(BaseSettings):
-    """Where Kafka, the Iceberg catalog and object storage are, as seen from the job."""
+    """Where Kafka and the Iceberg catalog are, as seen from the job.
+
+    Object storage is not configured here: the catalog sends its settings with each table,
+    and signs every storage request (ADR-0012).
+    """
 
     model_config = SettingsConfigDict(extra="ignore")
 
     kafka_bootstrap_servers: str = "redpanda:9092"
-    iceberg_catalog_uri: str = "http://iceberg-rest:8181"
-    s3_endpoint: str = "http://object-store:9000"
+    iceberg_catalog_uri: str = "http://lakekeeper:8181/catalog"
+    # The Lakekeeper warehouse the tables live in (scripts/create-warehouse.sh).
+    iceberg_warehouse: str = "wikipulse"
     log_level: str = "INFO"
 
 

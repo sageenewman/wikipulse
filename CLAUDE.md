@@ -114,7 +114,7 @@ Run inside the codespace. `make help` lists them all.
 | `make ps` / `make logs` | Service status / logs |
 | `make clean` | Stop and delete data volumes |
 | `make topics` | Create the Kafka topics if they do not exist |
-| `make lakehouse` | Start object storage (RustFS) and the Iceberg catalog, and create the buckets |
+| `make lakehouse` | Start object storage (RustFS) and the Iceberg catalog (Lakekeeper on Postgres), and create the bucket and warehouse |
 | `make check-lakehouse` | Create a test table through the catalog and check its files reach storage |
 | `make bronze` / `make check-bronze` | Start the bronze Spark job (`JOB=bronze-replay` for replays) / compare its table with its topic |
 | `make ingest` | Run the live producer: Wikimedia stream to Kafka |

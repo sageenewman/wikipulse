@@ -100,6 +100,7 @@ Goal: events land in Iceberg, clean and deduplicated.
 - [x] Spark Structured Streaming job: `wiki.raw` → `bronze.recentchange` (append, raw), with `make check-bronze` ([ADR-0011](adr/0011-spark-bronze-job.md))
 - [x] Spark tests in CI, inside the Spark image: `to_bronze` and the checker, including planted duplicates and holes
 - [ ] Run the bronze job end to end in CI against a short replay, including a planted duplicate that `make check-bronze` must reject
+- [x] Iceberg catalog on Postgres (Lakekeeper) with remote signing, after SQLite failed a commit under concurrent requests ([ADR-0012](adr/0012-lakekeeper-catalog.md))
 - [ ] Checkpointing, verified by killing and restarting the job
 - [ ] Silver job: parse, normalize, dedupe on `meta.id` with a watermark
 - [ ] Wiki allowlist (`WIKI_ALLOWLIST`, starting with `enwiki`) applied in silver, never at ingestion

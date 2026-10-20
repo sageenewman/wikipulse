@@ -47,9 +47,10 @@ make check-gaps TOPIC=wiki.replay  # verify the replayed copy
 # record a past window (Wikimedia keeps about 7 days)
 make record OUT=data/recordings/event.jsonl.gz ARGS="--from 2026-09-30T09:00:00Z --to 2026-10-01T00:00:00Z"
 
-# the lakehouse: object storage (RustFS) and the Iceberg catalog
-make lakehouse        # start them and create the bucket
+# the lakehouse: object storage (RustFS) and the Iceberg catalog (Lakekeeper on Postgres)
+make lakehouse        # start them, create the bucket and the catalog's warehouse
 make check-lakehouse  # create a test table and check its files reach storage
+# catalog web UI: http://localhost:8181/ui
 # storage web console: http://localhost:9001/rustfs/console/
 
 # bronze: Spark copies every message of a topic into an Iceberg table

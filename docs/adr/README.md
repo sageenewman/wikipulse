@@ -13,7 +13,8 @@ An ADR records one significant decision: the context, what we chose, and the con
 | [0007](0007-ingestion-message-contract.md) | Ingestion message contract (key, value, partitions, delivery) | Accepted |
 | [0008](0008-replay-topics.md) | Replayed data gets its own topics; the live topics have one writer | Accepted |
 | [0009](0009-ci-and-automated-review.md) | CI and automated code review in GitHub Actions | Accepted |
-| [0010](0010-local-lakehouse-storage.md) | RustFS and the reference REST catalog for the local lakehouse (replaces MinIO) | Accepted |
+| [0010](0010-local-lakehouse-storage.md) | RustFS and the reference REST catalog for the local lakehouse (replaces MinIO) | Accepted; catalog part replaced by 0012 |
 | [0011](0011-spark-bronze-job.md) | The bronze job: Spark in a container, raw rows, one table per source | Accepted |
+| [0012](0012-lakekeeper-catalog.md) | Lakekeeper on Postgres as the Iceberg catalog, with remote signing | Accepted |
 
 New ADRs: copy [template.md](template.md) and use the next number.
