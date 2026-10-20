@@ -32,7 +32,8 @@ The local lakehouse is for development and tests. In the cloud, the tables live 
 ## Consequences
 - ✅ The local stack matches Iceberg's own reference setup, so the official documentation and examples apply directly.
 - ✅ Swapping storage or catalog is configuration only.
-- ✅ `make check-lakehouse` verifies the pair end to end: the catalog creates a table, and its metadata file is found in storage.
+- ✅ `make check-lakehouse` verifies the pair end to end: the catalog creates a table, its metadata file is found in storage, and dropping the table removes the file. CI runs it on every pull request, so a broken image upgrade or catalog setting shows up at once.
+- ✅ Both images are pinned by digest as well as by tag, so the same tag cannot bring different content (the reasoning of [ADR-0009](0009-ci-and-automated-review.md) for actions).
 - ⚠️ RustFS reached 1.0 in September 2026. It is young, and we may meet its bugs early. Iceberg's own setup pins 1.0.0, which is the fallback if 1.0.3 shows a problem.
 - ⚠️ The reference catalog has no users or permissions. Acceptable for local development only.
 - ⚠️ Most older Iceberg tutorials show MinIO. Its settings map closely to RustFS, but not one to one.

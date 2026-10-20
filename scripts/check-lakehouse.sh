@@ -1,7 +1,7 @@
 #!/bin/sh
 # End-to-end check of the local lakehouse: `make check-lakehouse`.
 # Asks the Iceberg catalog to create a table, checks that the table's metadata file
-# landed in object storage, then drops the table and its files.
+# landed in object storage, then drops the table and checks that its files are gone.
 # Runs inside the object-store container, like create-buckets.sh: its curl signs S3
 # requests completely, while the curl 7.88 of the dev container leaves out the
 # x-amz-content-sha256 header that S3 requires.
@@ -28,6 +28,15 @@ case "$status" in
   *) echo "FAIL: creating the namespace returned HTTP $status" >&2; exit 1 ;;
 esac
 
+drop_table() {
+  curl -sS --fail -o /dev/null -X DELETE \
+    "$CATALOG/v1/namespaces/$NAMESPACE/tables/$TABLE?purgeRequested=true"
+}
+
+# From here on a table may exist. If any step fails, drop it on the way out, so a failed
+# check does not leave a table in the catalog and its files in storage.
+trap 'echo "--> cleaning up after the failure"; drop_table || true' EXIT
+
 step "create table $NAMESPACE.$TABLE"
 response=$(curl -sS --fail -X POST "$CATALOG/v1/namespaces/$NAMESPACE/tables" \
   -H 'Content-Type: application/json' -d "{
@@ -46,13 +55,28 @@ if [ -z "$location" ]; then
 fi
 echo "    metadata file: $location"
 
-step "metadata file is in object storage"
 path=${location#s3://}
-curl -sS --fail -o /dev/null --head --aws-sigv4 aws:amz:us-east-1:s3 \
-  --user "$KEY:$SECRET" "$STORAGE/$path"
+storage_status() {
+  curl -sS -o /dev/null -w '%{http_code}' --head --aws-sigv4 aws:amz:us-east-1:s3 \
+    --user "$KEY:$SECRET" "$STORAGE/$path"
+}
+
+step "metadata file is in object storage"
+status=$(storage_status)
+if [ "$status" != 200 ]; then
+  echo "FAIL: the metadata file is not in storage (HTTP $status)" >&2
+  exit 1
+fi
 
 step "drop the table and its files"
-curl -sS --fail -o /dev/null -X DELETE \
-  "$CATALOG/v1/namespaces/$NAMESPACE/tables/$TABLE?purgeRequested=true"
+drop_table
+trap - EXIT
 
-echo "OK: the catalog created a table and its metadata is in object storage"
+step "metadata file is gone from object storage"
+status=$(storage_status)
+if [ "$status" != 404 ]; then
+  echo "FAIL: the table was dropped but its metadata file is still in storage (HTTP $status)" >&2
+  exit 1
+fi
+
+echo "OK: the catalog created a table in object storage, and dropping it removed its files"

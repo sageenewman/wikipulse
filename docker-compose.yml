@@ -57,10 +57,11 @@ services:
 
   # --- Lakehouse (profile "lakehouse"): object storage + Iceberg catalog -----------------
   # Same pair as Apache Iceberg's own quickstarts and tests. See docs/adr/0010-local-lakehouse-storage.md
+  # Images are pinned by digest as well as tag: a tag can be moved to different content, a digest cannot.
 
   # S3-compatible object storage. Holds the table files: Parquet data and Iceberg metadata.
   object-store:
-    image: rustfs/rustfs:1.0.3
+    image: rustfs/rustfs:1.0.3@sha256:9ca9559533b537d10482fe923288b676ad08f92a7069d9a17327fbae3cab688b
     profiles: [lakehouse]
     environment:
       RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY_ID:-wikipulse}
@@ -82,7 +83,7 @@ services:
   # tables exist and where each table's current metadata file is. Committing a write to a
   # table means swapping that pointer, which is what makes Iceberg writes atomic.
   iceberg-rest:
-    image: apache/iceberg-rest-fixture:1.10.1
+    image: apache/iceberg-rest-fixture:1.10.1@sha256:f7d679d30ac9c640bdeb2c015dff533cd3c8f1c7d491ebcb5d436f9a42db1d6f
     profiles: [lakehouse]
     environment:
       # The catalog's own state goes to a SQLite file on a volume. The image default is /tmp,

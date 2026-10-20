@@ -139,6 +139,35 @@ jobs:
           path: ${{ env.CHECKS_DIR }}
           retention-days: 7
 
+  lakehouse:
+    name: Lakehouse end to end
+    # Starts object storage and the Iceberg catalog, and checks that a table created
+    # through the catalog lands in storage. Catches a broken image upgrade or a broken
+    # catalog setting before anything that depends on them does (docs/adr/0010).
+    # A review request (label) changes no code, so it does not run this again.
+    if: github.event.action != 'labeled'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: lakehouse-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Start the lakehouse
+        run: make lakehouse
+
+      - name: Check the lakehouse
+        run: make check-lakehouse
+
+      - name: Show service logs
+        if: ${{ failure() }}
+        run: docker compose --profile lakehouse logs --tail=100 object-store iceberg-rest
+
+      - name: Stop the stack
+        if: ${{ always() }}
+        run: make down
+
   review:
     name: Code review
     needs: checks
