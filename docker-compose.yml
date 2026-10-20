@@ -88,7 +88,11 @@ services:
     environment:
       # The catalog's own state goes to a SQLite file on a volume. The image default is /tmp,
       # which is lost when the container is recreated, while the data files would remain.
-      CATALOG_URI: jdbc:sqlite:/home/iceberg/iceberg_catalog.db
+      # SQLite allows one writer at a time and by default fails at once when the file is
+      # locked; the catalog turned that into HTTP 500 and failed a bronze commit. WAL lets
+      # readers and the writer work at the same time, and busy_timeout makes a writer
+      # wait up to 10s for the lock instead of failing.
+      CATALOG_URI: jdbc:sqlite:/home/iceberg/iceberg_catalog.db?journal_mode=WAL&busy_timeout=10000
       CATALOG_WAREHOUSE: s3://warehouse/
       CATALOG_IO__IMPL: org.apache.iceberg.aws.s3.S3FileIO
       CATALOG_S3_ENDPOINT: http://object-store:9000
