@@ -26,7 +26,11 @@ The reviewer is independent of the author:
    ```
    A failing check is a blocker. Stop and report it.
 
-   A reviewer that cannot run commands takes the results from the output the author provides. A check with no output is reported as "not run", never as "pass".
+   A reviewer that cannot run commands takes the results from CI, or from the output the author provides when the review is started by hand. A check with no output is reported as "not run", never as "pass".
+
+## How a review is started
+
+The [CI workflow](../.github/workflows/ci.yml) starts the reviewer agent once, when a pull request is opened or leaves draft, and posts the review on the pull request ([ADR-0009](adr/0009-ci-and-automated-review.md)). Pushes do not start a review. To request the next review, for example after the fixes, add the `review` label; the workflow removes it when the review is done. A review after fixes is given the earlier reviews and starts with an **Earlier findings** section.
 
 ## What to check
 
@@ -159,6 +163,9 @@ A PR without both is not ready for a decision.
 **Checks:** lint <pass/fail/not run> · typecheck <pass/fail/not run> · tests <n passed, n failed / not run>
 
 **Summary:** two or three sentences on what the change does and the overall state.
+
+### Earlier findings
+Only in a review after fixes: one line per blocker and "should fix" from the previous review, marked fixed, not fixed or deferred, with the file and line that shows it.
 
 ### Blockers
 1. `path/file.py:42` — what is wrong.

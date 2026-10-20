@@ -1,0 +1,283 @@
+# Checks every pull request, and reviews it with the code-reviewer agent.
+# Decisions behind this file: docs/adr/0009-ci-and-automated-review.md
+
+name: CI
+
+on:
+  pull_request:
+    # "labeled" is how a review after the first one is requested: add the "review" label.
+    types: [opened, synchronize, reopened, ready_for_review, labeled]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    # Named explicitly so GitHub adds "-o pipefail": without it, "make lint | tee"
+    # reports the exit code of tee, and a failing check would look green.
+    shell: bash
+
+jobs:
+  checks:
+    name: Lint, types, tests
+    # Other labels change nothing in the code, and a new run would cancel the one in progress.
+    if: github.event.action != 'labeled' || github.event.label.name == 'review'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      # A newer push to the same branch makes an older run pointless.
+      group: checks-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        id: install
+        run: |
+          # Outside the checkout, so the checks never see their own output.
+          echo "CHECKS_DIR=$RUNNER_TEMP/checks" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/checks"
+          uv sync --locked
+
+      # Each check writes its output to a file, and the next check runs even if
+      # this one failed. (Inside make lint, the format check runs only if ruff check passed.)
+      - name: Lint
+        id: lint
+        env:
+          # One line per problem ("path:line:col: CODE message"), easy to turn into annotations.
+          RUFF_OUTPUT_FORMAT: concise
+        run: make lint 2>&1 | tee "$CHECKS_DIR/lint.txt"
+
+      - name: Type check
+        id: typecheck
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: make typecheck 2>&1 | tee "$CHECKS_DIR/typecheck.txt"
+
+      - name: Tests
+        id: test
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: make test 2>&1 | tee "$CHECKS_DIR/test.txt"
+
+      - name: Report results
+        if: ${{ !cancelled() }}
+        env:
+          LINT: ${{ steps.lint.outcome }}
+          TYPECHECK: ${{ steps.typecheck.outcome }}
+          TEST: ${{ steps.test.outcome }}
+        run: |
+          # The plain summary is for the reviewer agent.
+          {
+            # On a PR, github.sha is a temporary merge commit; name the PR's own commit too.
+            echo "Produced by GitHub Actions run ${{ github.run_id }} on commit ${{ github.event.pull_request.head.sha || github.sha }} (checked out as ${{ github.sha }})."
+            echo "lint: $LINT"
+            echo "typecheck: $TYPECHECK"
+            echo "tests: $TEST"
+          } > "$CHECKS_DIR/summary.txt"
+
+          icon() {
+            case "$1" in
+              success) echo "✅ pass" ;;
+              failure) echo "❌ fail" ;;
+              *) echo "⚪ not run" ;;
+            esac
+          }
+
+          # The table and the failing output are for people, on the run's summary page.
+          {
+            echo "## Checks"
+            echo
+            echo "| Check | Result |"
+            echo "|---|---|"
+            echo "| Lint (\`make lint\`) | $(icon "$LINT") |"
+            echo "| Type check (\`make typecheck\`) | $(icon "$TYPECHECK") |"
+            echo "| Tests (\`make test\`) | $(icon "$TEST") |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          for check in lint:"$LINT" typecheck:"$TYPECHECK" test:"$TEST"; do
+            name=${check%%:*}
+            outcome=${check#*:}
+            [ "$outcome" = failure ] || continue
+            {
+              echo
+              echo "<details><summary>❌ <code>make $name</code> output</summary>"
+              echo
+              echo '```text'
+              tail -n 200 "$CHECKS_DIR/$name.txt"
+              echo '```'
+              echo
+              echo "</details>"
+            } >> "$GITHUB_STEP_SUMMARY"
+          done
+
+          # Annotations put each problem on its line in the pull request's "Files changed" tab.
+          # ruff and mypy print "path:line[:col]: message".
+          cat "$CHECKS_DIR"/lint.txt "$CHECKS_DIR"/typecheck.txt 2>/dev/null \
+            | grep -E '^[^ :]+\.py:[0-9]+(:[0-9]+)?: ' \
+            | while IFS= read -r line; do
+                file=${line%%:*}
+                rest=${line#*:}
+                echo "::error file=$file,line=${rest%%:*}::${rest#*: }"
+              done || true
+          # ruff format prints "Would reformat: path".
+          sed -n 's/^Would reformat: \(.*\)$/::error file=\1::Not formatted. Run make fmt./p' \
+            "$CHECKS_DIR/lint.txt" 2>/dev/null || true
+          # pytest prints "FAILED path::test - reason".
+          sed -n 's/^FAILED \([^:]*\)::\(.*\)$/::error file=\1::\2/p' \
+            "$CHECKS_DIR/test.txt" 2>/dev/null || true
+
+      - name: Save check output for the reviewer
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: check-results
+          path: ${{ env.CHECKS_DIR }}
+          retention-days: 7
+
+  review:
+    name: Code review
+    needs: checks
+    # Runs once by itself, when a PR opens or leaves draft. Any later review, for example
+    # after fixes, is requested by adding the "review" label. Pushes do not start a review:
+    # each review uses the owner's Claude subscription.
+    # PRs from forks are skipped: GitHub does not give them the token.
+    if: >-
+      !cancelled()
+      && github.event_name == 'pull_request'
+      && github.event.pull_request.head.repo.full_name == github.repository
+      && !github.event.pull_request.draft
+      && (github.event.action == 'opened'
+        || github.event.action == 'ready_for_review'
+        || (github.event.action == 'labeled' && github.event.label.name == 'review'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: write
+    concurrency:
+      # A newer review request for the same PR replaces one that is still running.
+      group: review-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    env:
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Get check output
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        continue-on-error: true
+        with:
+          name: check-results
+          path: .review-input/checks
+
+      - name: Collect the pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p .review-input
+          gh pr diff "$PR_NUMBER" > .review-input/diff.patch
+          gh pr view "$PR_NUMBER" --json title,body \
+            --jq '"# " + .title + "\n\n" + .body' > .review-input/description.md
+          # Earlier reviews and the author's replies, so a review after fixes can check them.
+          # Matched by author as well as by heading: anyone can comment on a public repository,
+          # so only reviews posted by this workflow and replies from people with write access count.
+          gh pr view "$PR_NUMBER" --json comments \
+            --jq '.comments[]
+              | select(
+                  ((.body | startswith("## Review of"))
+                    and (.author.login == "github-actions" or .author.login == "github-actions[bot]"))
+                  or ((.body | startswith("## Changes after review"))
+                    and (.authorAssociation == "OWNER" or .authorAssociation == "MEMBER"
+                      or .authorAssociation == "COLLABORATOR")))
+              | "----- " + .createdAt + " -----\n" + .body + "\n"' \
+            > .review-input/earlier-reviews.md
+
+      - name: Review
+        id: review
+        uses: anthropics/claude-code-action@db77d4d3c98f3f6380e7cd45ffba2342a3dbde3c # v1.0.254
+        with:
+          # Subscription token only. There is deliberately no API key here, so a
+          # review can never be billed per use (ADR-0009).
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # The workflow's own token: it can only read the code and comment on PRs.
+          github_token: ${{ github.token }}
+          # The session runs as the reviewer agent itself, and only the read-only tools
+          # exist in it: no shell, no file writes, no subagents. Its final message is
+          # the review, and the next steps post it.
+          claude_args: >-
+            --agent code-reviewer
+            --tools "Read,Grep,Glob"
+            --allowedTools "Read,Grep,Glob"
+            --max-turns 80
+          prompt: |
+            Review pull request #${{ env.PR_NUMBER }} in ${{ github.repository }}.
+            The pull request's code is checked out in the working directory.
+
+            - The diff: .review-input/diff.patch
+            - The pull request description: .review-input/description.md
+            - The check results: .review-input/checks/ (summary.txt holds the outcome of each check).
+              They were produced by the CI job of this workflow, not by the author.
+              If the folder is missing, the checks did not run.
+            - Earlier reviews of this pull request and the author's replies: .review-input/earlier-reviews.md
+              If it is not empty, this is a review after fixes: fill in the "Earlier findings" section
+              from the most recent earlier review.
+
+      - name: Save the review session
+        if: ${{ !cancelled() && steps.review.outputs.execution_file != '' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: review-session
+          path: ${{ steps.review.outputs.execution_file }}
+          retention-days: 7
+
+      - name: Post the review
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SESSION: ${{ steps.review.outputs.execution_file }}
+        run: |
+          # The review is the final message of a session that ended normally.
+          outcome=$(jq -r '[.[] | select(.type == "result")] | last | .subtype // "none"' "$SESSION" 2>/dev/null || echo none)
+          if [ "$outcome" = success ]; then
+            jq -r '[.[] | select(.type == "result")] | last | .result // ""' "$SESSION" > .review-input/review.md
+          fi
+          # A failed review fails this job (red on the PR) and posts nothing.
+          if [ ! -s .review-input/review.md ]; then
+            echo "::error::The automated review failed (session result: $outcome). Add the review label to run it again."
+            exit 1
+          fi
+          {
+            echo
+            echo "---"
+            echo "<sub>Automated review of commit ${HEAD_SHA:0:7} · [workflow run]($RUN_URL)</sub>"
+          } >> .review-input/review.md
+          gh pr comment "$PR_NUMBER" --body-file .review-input/review.md
+
+  # GitHub sends no event for a label that is already on the PR, so the label is removed
+  # after each request. To request the next review, add it again. This is a job of its own
+  # so it runs even when the review is skipped (a draft PR) or fails.
+  remove-review-label:
+    name: Remove the review label
+    needs: [checks, review]
+    if: >-
+      always()
+      && github.event.action == 'labeled'
+      && github.event.label.name == 'review'
+      && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh api -X DELETE --silent
+          "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels/review"

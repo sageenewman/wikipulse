@@ -105,11 +105,11 @@ These follow from [ADR-0006](adr/0006-data-scope-and-retention.md), [ADR-0007](a
 
 | Rule | Tool | Status |
 |---|---|---|
-| Formatting and lint | `ruff` (`make lint`) | Enforced locally |
-| Static types, strict | `mypy` (`make typecheck`) | Enforced locally |
-| Tests pass | `pytest` (`make test`) | Enforced locally |
-| All of the above on every PR | GitHub Actions | Planned |
+| Formatting and lint | `ruff` (`make lint`) | Runs on every PR |
+| Static types, strict | `mypy` (`make typecheck`) | Runs on every PR |
+| Tests pass | `pytest` (`make test`) | Runs on every PR |
+| Code review following [CODE_REVIEW.md](CODE_REVIEW.md) | Reviewer agent in GitHub Actions | Runs when a PR opens; again on request |
 | Function complexity and length limits | `ruff` | Planned |
 | Test coverage of at least 85% | `pytest-cov` | Planned |
 
-"Enforced locally" means the check exists but nothing stops a merge if nobody runs it. Closing that gap is the first item of the quality pass in the [roadmap](ROADMAP.md).
+"Runs on every PR" means the [CI workflow](../.github/workflows/ci.yml) runs the check on each push to a pull request ([ADR-0009](adr/0009-ci-and-automated-review.md)). A failing check is shown on the pull request. Blocking the merge button on it is a repository setting.

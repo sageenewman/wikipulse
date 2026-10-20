@@ -11,7 +11,7 @@ Before starting work, read the [design document](docs/DESIGN.md) and check the [
 - `main` is always working. All work happens on a branch and is merged through a pull request.
 - One branch = one focused piece of work, usually one roadmap item.
 - The PR description explains **why** the change exists, what changed, and any follow-ups.
-- CI must be green before merging.
+- CI must be green before merging. The [CI workflow](.github/workflows/ci.yml) runs lint, type checks and tests on every push to a pull request.
 
 ### Branch names
 
@@ -46,7 +46,7 @@ The full rules are in [docs/ENGINEERING.md](docs/ENGINEERING.md). In short:
 
 Every PR is reviewed before it is merged, following [docs/CODE_REVIEW.md](docs/CODE_REVIEW.md):
 
-1. The reviewer examines the change and reports findings. The reviewer never changes code.
+1. The reviewer examines the change and reports findings. The reviewer never changes code. For pull requests from this repository, a reviewer agent runs in CI when the PR opens and posts its review; after fixes, add the `review` label to request the next review. Pull requests from forks are reviewed by hand.
 2. The author answers every finding and posts a summary of the changes made after the review.
 3. The repository owner approves the merge, after reading the PR description and that summary.
 

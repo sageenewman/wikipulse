@@ -19,7 +19,7 @@ Goal: a repo that opens in Codespaces with one click and has green CI.
 - [x] `docker-compose.yml` with Redpanda, Redpanda Console and memory limits
 - [x] `.env.example`
 - [x] Verify the environment end to end in Codespaces
-- [ ] GitHub Actions CI: lint + type-check + tests (once there is code to check)
+- [x] GitHub Actions CI: lint + type-check + tests ([ADR-0009](adr/0009-ci-and-automated-review.md))
 
 ## Phase 1: Ingestion
 Goal: Wikipedia events flowing into Redpanda reliably.
@@ -80,7 +80,9 @@ Goal: the code meets [ENGINEERING.md](ENGINEERING.md), and the checks run by the
 
 - [x] Engineering guidelines ([ENGINEERING.md](ENGINEERING.md))
 - [x] Code review guide ([CODE_REVIEW.md](CODE_REVIEW.md))
-- [ ] GitHub Actions CI on every PR: lint, type-check, tests
+- [x] GitHub Actions CI on every PR: lint, type-check, tests
+- [ ] Make the CI checks required before merging (branch protection on `main`)
+- [ ] Move the CI result parsing (summary table, annotations) from inline bash into a tested script under `scripts/`. Its failure paths have not run yet (review of #9)
 - [ ] Complexity and function-length limits in `ruff`
 - [ ] Test coverage measured, with a minimum of 85% in CI
 - [ ] `MessageSink` protocol for the Kafka publisher; remove `cast` from the tests
@@ -89,7 +91,7 @@ Goal: the code meets [ENGINEERING.md](ENGINEERING.md), and the checks run by the
 - [ ] Split the recorder: stop policy, part writing and merging
 - [ ] Integration tests against a real broker for `resume.py` and `check_gaps.py`
 - [ ] Decide what happens when a delivery to Kafka fails for good (today it is only counted and logged)
-- [~] Automated reviewer that applies [CODE_REVIEW.md](CODE_REVIEW.md) to every PR (the reviewer agent exists and is started by hand; running it automatically is still open)
+- [x] Automated reviewer that applies [CODE_REVIEW.md](CODE_REVIEW.md) to every PR: the reviewer agent runs in CI when a PR opens, and again on request with the `review` label ([ADR-0009](adr/0009-ci-and-automated-review.md))
 
 ## Phase 2: Lakehouse (bronze & silver)
 Goal: events land in Iceberg, clean and deduplicated.
