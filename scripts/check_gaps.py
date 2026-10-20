@@ -1,12 +1,15 @@
-"""Check the raw topic for lost and duplicated events.
+"""Check a topic for lost and duplicated events.
 
 Every Wikimedia event carries its position in Wikimedia's own Kafka
 (`meta.topic`, `meta.partition`, `meta.offset`). Those offsets are consecutive,
-so after reading our raw topic we can tell exactly what is missing or repeated.
+so after reading one of our topics we can tell exactly what is missing or repeated.
 
-Usage: `make check-gaps` (exits with status 1 if any event is missing).
+Usage: `make check-gaps` reads the live raw topic, and
+`make check-gaps TOPIC=wiki.replay` reads another one.
+Exits with status 1 if any event is missing.
 """
 
+import argparse
 import json
 import sys
 from collections import defaultdict
@@ -16,8 +19,8 @@ from confluent_kafka import OFFSET_BEGINNING, Consumer, KafkaError, KafkaExcepti
 from ingestion.config import Settings
 
 
-def read_upstream_offsets(settings: Settings) -> dict[tuple[str, int], list[int]]:
-    """Read the whole raw topic and group upstream offsets by upstream partition."""
+def read_upstream_offsets(settings: Settings, topic: str) -> dict[tuple[str, int], list[int]]:
+    """Read the whole of `topic` and group upstream offsets by upstream partition."""
     consumer = Consumer(
         {
             "bootstrap.servers": settings.kafka_bootstrap_servers,
@@ -28,7 +31,6 @@ def read_upstream_offsets(settings: Settings) -> dict[tuple[str, int], list[int]
     )
     offsets: dict[tuple[str, int], list[int]] = defaultdict(list)
     try:
-        topic = settings.raw_topic
         partitions = consumer.list_topics(topic, timeout=10).topics[topic].partitions
         consumer.assign([TopicPartition(topic, p, OFFSET_BEGINNING) for p in partitions])
         finished: set[int] = set()
@@ -54,10 +56,15 @@ def read_upstream_offsets(settings: Settings) -> dict[tuple[str, int], list[int]
     return offsets
 
 
-def main() -> int:
-    offsets = read_upstream_offsets(Settings())
+def main(argv: list[str] | None = None) -> int:
+    settings = Settings()
+    parser = argparse.ArgumentParser(description="Check a topic for lost and duplicated events")
+    parser.add_argument("--topic", default=settings.raw_topic, help="topic to read")
+    topic: str = parser.parse_args(argv).topic
+
+    offsets = read_upstream_offsets(settings, topic)
     if not offsets:
-        print("raw topic is empty")
+        print(f"{topic} is empty")
         return 0
 
     missing_total = 0

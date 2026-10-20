@@ -29,11 +29,11 @@ ingest: ## Run the ingestion service (Ctrl+C to stop)
 record: ## Record the stream to a file: make record OUT=data/recordings/x.jsonl.gz ARGS="--since-minutes 10"
 	uv run python -m ingestion record --out $(OUT) $(ARGS)
 
-replay: ## Publish a recording to Kafka: make replay FILE=data/recordings/x.jsonl.gz SPEED=10
+replay: ## Publish a recording to the replay topics: make replay FILE=data/recordings/x.jsonl.gz SPEED=10
 	uv run python -m ingestion replay $(FILE) --speed $(or $(SPEED),1)
 
-check-gaps: ## Check the raw topic for lost or duplicated events
-	PYTHONPATH=. uv run python scripts/check_gaps.py
+check-gaps: ## Check a topic for lost or duplicated events (default: the live raw topic): make check-gaps TOPIC=wiki.replay
+	PYTHONPATH=. uv run python scripts/check_gaps.py $(if $(TOPIC),--topic $(TOPIC))
 
 sync: ## Install Python dependencies
 	uv sync

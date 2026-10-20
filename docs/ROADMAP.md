@@ -54,7 +54,7 @@ Problems found by the code reviewer in merged code (reviews of #5 and #7). Every
 Priority: **blocker** = wrong behaviour or data loss, fixed before anything else · **important** = can damage data or hide a failure, fixed before Phase 2 · **low** = no wrong result today, fixed when the code is next touched.
 
 ### Blocker
-- [ ] A replay moves the live producer's resume point. Replayed messages carry the recording's stream position in the `last_event_id` header, and the live producer resumes from the newest header in Kafka. After a replay, the next live start skips data or re-ingests old history (`ingestion/main.py`, `ingestion/resume.py`)
+- [x] A replay moves the live producer's resume point. Replayed messages carry the recording's stream position in the `last_event_id` header, and the live producer resumes from the newest header in Kafka. After a replay, the next live start skips data or re-ingests old history. Fixed: a replay writes to its own topics ([ADR-0008](adr/0008-replay-topics.md))
 
 ### Important
 - [ ] A recording can end early and the log does not say why it stopped: the idle timer starts before the first message arrives, and no stop reason is logged

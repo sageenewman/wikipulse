@@ -39,8 +39,10 @@ make ingest  # stream live Wikimedia events into the wiki.raw topic (Ctrl+C to s
 make check-gaps  # verify that no events were lost or duplicated
 
 # record the last 10 minutes of the stream, then replay them 10x faster
+# a replay goes to its own topic, wiki.replay, and never into wiki.raw
 make record OUT=data/recordings/sample.jsonl.gz ARGS="--since-minutes 10"
 make replay FILE=data/recordings/sample.jsonl.gz SPEED=10
+make check-gaps TOPIC=wiki.replay  # verify the replayed copy
 
 # record a past window (Wikimedia keeps about 7 days)
 make record OUT=data/recordings/event.jsonl.gz ARGS="--from 2026-09-30T09:00:00Z --to 2026-10-01T00:00:00Z"
