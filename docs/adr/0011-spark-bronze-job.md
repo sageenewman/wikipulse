@@ -36,6 +36,6 @@ The roadmap had planned to install Java and Spark in the dev container and to mo
 - ⚠️ The image is 2.55GB, almost all of it the official Spark image.
 - ⚠️ The checkpoint and the table belong together. Deleting one without the other makes the job skip or repeat messages. `make clean` deletes both.
 - ✅ The checker is shown to fail: its tests plant a duplicate and a hole, and breaking the counting logic on purpose made them fail.
-- ⚠️ Every CI run downloads the 2.2GB Spark image to run the Spark tests, a few minutes per run.
+- ⚠️ Every CI run downloads the 2.2GB Spark image to run the Spark tests (the first runs took about a minute).
 - ⚠️ Without PySpark in the project environment, mypy does not check calls into Spark.
 - ⚠️ Restart safety (killing the job and starting it again) is not verified yet; it is the next roadmap item.
