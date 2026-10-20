@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help up down ps logs clean topics lakehouse buckets warehouse check-lakehouse bronze check-bronze test-spark ingest record replay check-gaps sync lint fmt typecheck test
+.PHONY: help up down ps logs clean topics lakehouse buckets warehouse check-lakehouse bronze check-bronze query test-spark ingest record replay check-gaps sync lint fmt typecheck test
 
 # Every profile, so that down and clean also stop the optional services.
 ALL_PROFILES := --profile lakehouse --profile streaming
@@ -48,6 +48,9 @@ bronze: lakehouse ## Start a bronze job (Kafka to Iceberg): make bronze, or make
 
 check-bronze: ## Check a bronze table against its topic for missing or duplicated messages: make check-bronze JOB=bronze-replay
 	docker compose $(ALL_PROFILES) run --rm --no-deps $(JOB) streaming/check_bronze.py
+
+query: ## Run one SQL query against the lakehouse: make query SQL="SELECT count(*) FROM lakehouse.bronze.recentchange"
+	docker compose $(ALL_PROFILES) run --rm --no-deps bronze streaming/query.py "$(SQL)"
 
 test-spark: ## Run the tests that need Spark, inside the Spark image (Python 3.10)
 	docker build --target test -t wikipulse-spark:test -f streaming/Dockerfile .

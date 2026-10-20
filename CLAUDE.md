@@ -117,9 +117,12 @@ Run inside the codespace. `make help` lists them all.
 | `make lakehouse` | Start object storage (RustFS) and the Iceberg catalog (Lakekeeper on Postgres), and create the bucket and warehouse |
 | `make check-lakehouse` | Create a test table through the catalog and check its files reach storage |
 | `make bronze` / `make check-bronze` | Start the bronze Spark job (`JOB=bronze-replay` for replays) / compare its table with its topic |
+| `make query SQL="..."` | Run one read-only Spark SQL query against the lakehouse |
 | `make ingest` | Run the live producer: Wikimedia stream to Kafka |
 | `make record` / `make replay` | Save the stream to a file / publish a recording to the replay topics |
 | `make check-gaps` | Check a topic for lost or duplicated events (the live raw topic by default) |
 | `make sync` | Install Python dependencies with uv |
 | `make lint` / `make fmt` / `make typecheck` / `make test` | ruff / ruff format / mypy / pytest |
 | `make test-spark` | The tests that need Spark, inside the Spark image |
+
+The documents a developer works from are indexed in [docs/README.md](docs/README.md). A change is done only when it can be run, configured, checked and fixed from the docs alone ([ENGINEERING.md](docs/ENGINEERING.md), section 7).

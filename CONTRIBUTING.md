@@ -44,6 +44,8 @@ The full rules are in [docs/ENGINEERING.md](docs/ENGINEERING.md). In short:
 
 ## Code review
 
+The pull request flow step by step, the CI jobs and how to request another review: [docs/CI.md](docs/CI.md).
+
 Every PR is reviewed before it is merged, following [docs/CODE_REVIEW.md](docs/CODE_REVIEW.md):
 
 1. The reviewer examines the change and reports findings. The reviewer never changes code. For pull requests from this repository, a reviewer agent runs in CI when the PR opens and posts its review; after fixes, add the `review` label to request the next review. Pull requests from forks are reviewed by hand.

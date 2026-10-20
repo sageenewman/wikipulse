@@ -21,6 +21,11 @@ Kafka (Redpanda) · Spark Structured Streaming · Apache Iceberg · dbt · DuckD
 
 ## Documentation
 
+Start at the [documentation index](docs/README.md): it points to the right document for each task.
+
+- [Operations guide](docs/OPERATIONS.md): running the stack, the UIs, common tasks, troubleshooting
+- [Data model](docs/DATA_MODEL.md): topics, tables, columns, checking and querying the data
+- [CI and the pull request workflow](docs/CI.md): the CI jobs, the automated review, requesting another review
 - [Design document](docs/DESIGN.md)
 - [Data source notes](docs/DATA_SOURCE.md)
 - [Architecture decisions (ADRs)](docs/adr/)
@@ -57,6 +62,7 @@ make check-lakehouse  # create a test table and check its files reach storage
 make bronze                          # wiki.raw into lakehouse.bronze.recentchange
 make bronze JOB=bronze-replay        # wiki.replay into lakehouse.bronze_replay.recentchange
 make check-bronze JOB=bronze-replay  # compare the table with its topic: missing or duplicated messages
+make query SQL="SELECT count(*) FROM lakehouse.bronze.recentchange"  # more examples: docs/DATA_MODEL.md
 # Spark UI: http://localhost:4040 (live job), http://localhost:4041 (replay job)
 
 make test        # run the tests
