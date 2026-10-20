@@ -28,8 +28,6 @@ jobs:
       # A newer push to the same branch makes an older run pointless.
       group: checks-${{ github.ref }}
       cancel-in-progress: true
-    env:
-      CHECKS_DIR: ${{ github.workspace }}/../checks
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -40,8 +38,10 @@ jobs:
       - name: Install dependencies
         id: install
         run: |
+          # Outside the checkout, so the checks never see their own output.
+          echo "CHECKS_DIR=$RUNNER_TEMP/checks" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/checks"
           uv sync --locked
-          mkdir -p "$CHECKS_DIR"
 
       # Each check writes its output to a file, and the next check runs even if
       # this one failed, so one run reports every problem.
@@ -193,6 +193,9 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # The workflow's own token: it can only read the code and comment on PRs.
           github_token: ${{ github.token }}
+          # Shows Claude's steps on the run's summary page, to see why a review went wrong.
+          # Safe here: only this repository's PRs run it, and Claude cannot reach secrets.
+          display_report: true
           # Claude can read and write files only. The next step posts the review.
           claude_args: >-
             --max-turns 15
