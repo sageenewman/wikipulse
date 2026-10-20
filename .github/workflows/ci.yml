@@ -46,7 +46,7 @@ jobs:
           uv sync --locked
 
       # Each check writes its output to a file, and the next check runs even if
-      # this one failed, so one run reports every problem.
+      # this one failed. (Inside make lint, the format check runs only if ruff check passed.)
       - name: Lint
         id: lint
         env:
@@ -185,9 +185,16 @@ jobs:
           gh pr view "$PR_NUMBER" --json title,body \
             --jq '"# " + .title + "\n\n" + .body' > .review-input/description.md
           # Earlier reviews and the author's replies, so a review after fixes can check them.
+          # Matched by author as well as by heading: anyone can comment on a public repository,
+          # so only reviews posted by this workflow and replies from people with write access count.
           gh pr view "$PR_NUMBER" --json comments \
             --jq '.comments[]
-              | select((.body | startswith("## Review of")) or (.body | startswith("## Changes after review")))
+              | select(
+                  ((.body | startswith("## Review of"))
+                    and (.author.login == "github-actions" or .author.login == "github-actions[bot]"))
+                  or ((.body | startswith("## Changes after review"))
+                    and (.authorAssociation == "OWNER" or .authorAssociation == "MEMBER"
+                      or .authorAssociation == "COLLABORATOR")))
               | "----- " + .createdAt + " -----\n" + .body + "\n"' \
             > .review-input/earlier-reviews.md
 
@@ -253,10 +260,24 @@ jobs:
           } >> .review-input/review.md
           gh pr comment "$PR_NUMBER" --body-file .review-input/review.md
 
-      # GitHub sends no event for a label that is already on the PR, so the label is
-      # removed after each review. To request the next one, add it again.
-      - name: Remove the review label
-        if: ${{ always() && github.event.action == 'labeled' }}
-        env:
+  # GitHub sends no event for a label that is already on the PR, so the label is removed
+  # after each request. To request the next review, add it again. This is a job of its own
+  # so it runs even when the review is skipped (a draft PR) or fails.
+  remove-review-label:
+    name: Remove the review label
+    needs: [checks, review]
+    if: >-
+      always()
+      && github.event.action == 'labeled'
+      && github.event.label.name == 'review'
+      && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+    steps:
+      - env:
           GH_TOKEN: ${{ github.token }}
-        run: gh api -X DELETE "repos/${{ github.repository }}/issues/$PR_NUMBER/labels/review" --silent
+        run: >-
+          gh api -X DELETE --silent
+          "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels/review"
