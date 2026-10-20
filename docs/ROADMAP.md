@@ -13,7 +13,7 @@ Goal: a repo that opens in Codespaces with one click and has green CI.
 - [x] Design document and initial ADRs
 - [x] Public GitHub repo
 - [ ] License
-- [x] `.devcontainer/devcontainer.json`: Docker-in-Docker, uv-managed Python 3.12, 2-core machine (Java 17 and 4 cores are added with Spark in Phase 2)
+- [x] `.devcontainer/devcontainer.json`: Docker-in-Docker, uv-managed Python 3.12, 2-core machine (Spark runs in its own container instead, and 2 cores proved enough: [ADR-0011](adr/0011-spark-bronze-job.md))
 - [x] `pyproject.toml` with ruff, mypy, pytest config (uv for dependency management)
 - [x] `Makefile` with `up`, `down`, `test`, `lint`, `fmt`
 - [x] `docker-compose.yml` with Redpanda, Redpanda Console and memory limits
@@ -97,7 +97,9 @@ Goal: the code meets [ENGINEERING.md](ENGINEERING.md), and the checks run by the
 Goal: events land in Iceberg, clean and deduplicated.
 
 - [x] Object storage (RustFS, replacing MinIO) + Iceberg REST catalog in docker-compose ([ADR-0010](adr/0010-local-lakehouse-storage.md))
-- [ ] Spark Structured Streaming job: `wiki.raw` → `bronze.recentchange` (append, raw)
+- [x] Spark Structured Streaming job: `wiki.raw` → `bronze.recentchange` (append, raw), with `make check-bronze` ([ADR-0011](adr/0011-spark-bronze-job.md))
+- [x] Spark tests in CI, inside the Spark image: `to_bronze` and the checker, including planted duplicates and holes
+- [ ] Run the bronze job end to end in CI against a short replay, including a planted duplicate that `make check-bronze` must reject
 - [ ] Checkpointing, verified by killing and restarting the job
 - [ ] Silver job: parse, normalize, dedupe on `meta.id` with a watermark
 - [ ] Wiki allowlist (`WIKI_ALLOWLIST`, starting with `enwiki`) applied in silver, never at ingestion

@@ -105,7 +105,53 @@ services:
         condition: service_healthy
     mem_limit: 512m
 
+  # --- Streaming (profile "streaming"): Spark jobs ----------------------------------------
+  # See docs/adr/0011-spark-bronze-job.md
+
+  # Bronze: every message of wiki.raw, appended unchanged to lakehouse.bronze.recentchange.
+  bronze: &spark-job
+    build:
+      context: .
+      dockerfile: streaming/Dockerfile
+      target: runtime
+    image: wikipulse-spark:dev
+    profiles: [streaming]
+    environment: &spark-env
+      KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
+      ICEBERG_CATALOG_URI: http://iceberg-rest:8181
+      S3_ENDPOINT: http://object-store:9000
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-wikipulse}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-wikipulse-dev-secret}
+      AWS_REGION: us-east-1
+      BRONZE_TRIGGER_SECONDS: ${BRONZE_TRIGGER_SECONDS:-60}
+    volumes:
+      - spark-checkpoints:/checkpoints
+    ports:
+      - "4040:4040" # Spark UI, with a Structured Streaming tab
+    depends_on:
+      redpanda:
+        condition: service_healthy
+      iceberg-rest:
+        condition: service_healthy
+    # The JVM heap is 1g (--driver-memory in streaming/Dockerfile); the rest is for the
+    # JVM's own overhead and the Python process.
+    mem_limit: 2g
+
+  # The same job for replays: wiki.replay into its own table, so replayed data never
+  # mixes with live data (ADR-0008). Its checkpoint follows from the table name.
+  bronze-replay:
+    <<: *spark-job
+    environment:
+      <<: *spark-env
+      BRONZE_SOURCE_TOPIC: wiki.replay
+      BRONZE_TABLE: lakehouse.bronze_replay.recentchange
+    ports:
+      - "4041:4040" # Spark UI
+
 volumes:
   redpanda-data:
   object-store-data:
   iceberg-catalog:
+  # Spark's record of what each job has read and committed. It belongs with the tables:
+  # `make clean` deletes both, never one without the other.
+  spark-checkpoints:
