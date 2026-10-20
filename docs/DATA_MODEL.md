@@ -76,7 +76,13 @@ The catalog UI (http://localhost:8181/ui) maps names to tables and shows their s
 
 ## Querying
 
-`make query SQL="..."` runs one Spark SQL query against the lakehouse and prints up to 100 rows. Use single quotes inside the query, and avoid `$`: `make` reads it as the start of a variable. Until silver exists, fields of the event are read from the JSON with `json_tuple(value, 'field', ...)`, which needs no `$`.
+`make query SQL="..."` runs one Spark SQL query against the lakehouse and prints up to 100 rows. It accepts reads only (`SELECT`, `WITH`, `SHOW`, `DESCRIBE`, `EXPLAIN`) and refuses anything that writes, so a typo cannot change or drop a table. The lakehouse must be running (`make lakehouse`).
+
+The query passes through `make` and the shell inside double quotes, so:
+
+- use single quotes for strings;
+- avoid `$`, which `make` reads as the start of a variable. Until silver exists, fields of the event are read from the JSON with `json_tuple(value, 'field', ...)`, which needs no `$`;
+- avoid backticks, which the shell runs as a command.
 
 ```bash
 # rows, and the time range they cover

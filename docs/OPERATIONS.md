@@ -79,6 +79,8 @@ Replays never reach the live topics or the live table ([ADR-0008](adr/0008-repla
 | A bronze job fails because offsets are no longer available | The job was stopped longer than the topic keeps messages (`wiki.raw`: 3 days), so they were deleted before it read them | Those messages are gone from Kafka. Decide whether to accept the gap or re-ingest from a recording |
 | Every table read or write fails with HTTP 403 | The storage key or `CATALOG_ENCRYPTION_KEY` changed after the warehouse was created; the catalog still uses the old key | `make clean`, then start again |
 | `make check-lakehouse` or `make warehouse` fails | A lakehouse service is not healthy | `make ps`, then `docker compose --profile lakehouse logs <service>` |
+| `make query` or `make check-bronze` fails with a connection error to `lakekeeper` or `redpanda` | They start only the Spark container, not the services it needs | `make up` and `make lakehouse` first |
+| `make query` answers `refused: make query runs reads only` | The statement writes (or does not start with `SELECT`, `WITH`, `SHOW`, `DESCRIBE`, `EXPLAIN`) | Intended: tables are changed only by their jobs. See [DATA_MODEL.md](DATA_MODEL.md#querying) |
 | `make lakehouse` fails on `catalog-migrate` | The catalog database could not be migrated | `docker compose --profile lakehouse logs catalog-migrate catalog-db` |
 | The producer starts far behind live after a restart | It resumes from the last position stored in Kafka and catches up | Expected. Set `RESUME_ON_START=false` to start from the live edge |
 | A replay refuses to start: replay topics must differ from the live topics | `REPLAY_RAW_TOPIC` or `REPLAY_DLQ_TOPIC` names a live topic | Fix the variable; see ADR-0008 |
