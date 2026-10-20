@@ -30,7 +30,7 @@ The reviewer is independent of the author:
 
 ## How a review is started
 
-The [CI workflow](../.github/workflows/ci.yml) starts the reviewer agent once, when a pull request is opened or leaves draft, and posts the review on the pull request ([ADR-0009](adr/0009-ci-and-automated-review.md)). Pushes do not start a review. To request the next review, for example after the fixes, add the `review` label; the workflow removes it when the review is done. A review after fixes is given the earlier reviews and starts with an **Earlier findings** section.
+The whole pull request flow, including how to request another review, is in [CI.md](CI.md). In short: the [CI workflow](../.github/workflows/ci.yml) starts the reviewer agent once, when a pull request is opened or leaves draft, and posts the review on the pull request ([ADR-0009](adr/0009-ci-and-automated-review.md)). Pushes do not start a review. To request the next review, for example after the fixes, add the `review` label; the workflow removes it when the review is done. A review after fixes is given the earlier reviews and starts with an **Earlier findings** section.
 
 ## What to check
 
@@ -81,6 +81,7 @@ Check against [ENGINEERING.md](ENGINEERING.md), section 4:
 ### 7. Scope and hygiene
 - Does the PR do one thing? Are there unrelated changes?
 - Are docs updated in the same PR: roadmap, README commands, ADR for a significant decision, data notes for a data surprise?
+- Could a developer use the change from the docs alone, without reading the code: run it, configure it, check it, and fix its known failures ([ENGINEERING.md](ENGINEERING.md), section 7)? A new command, setting, table or failure mode that is missing from [OPERATIONS.md](OPERATIONS.md), [DATA_MODEL.md](DATA_MODEL.md) or [CI.md](CI.md) is a "should fix".
 - Are there secrets, credentials, personal information or large data files in the diff?
 - Are new dependencies justified?
 

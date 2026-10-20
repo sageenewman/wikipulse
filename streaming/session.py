@@ -24,6 +24,9 @@ def build_session(app_name: str, settings: LakehouseSettings) -> SparkSession:
         # each request (remote signing, ADR-0012).
         .config(f"{catalog}.io-impl", "org.apache.iceberg.aws.s3.S3FileIO")
         .config("spark.sql.session.timeZone", "UTC")
+        # Set at startup: Spark otherwise logs dozens of INFO lines before a job could
+        # lower the level itself.
+        .config("spark.log.level", "WARN")
         # One small machine: the default of 200 shuffle partitions is pure overhead.
         .config("spark.sql.shuffle.partitions", "4")
         .getOrCreate()

@@ -100,6 +100,7 @@ These follow from [ADR-0006](adr/0006-data-scope-and-retention.md), [ADR-0007](a
 - **Only the repository owner approves a merge,** after reading the PR description and the changes-after-review summary.
 - **A significant decision gets an ADR.** A tool choice or an architecture change is recorded in [`docs/adr/`](adr/).
 - **Docs change with the code.** The roadmap, the README commands and the data notes are updated in the same PR.
+- **A change is done when it can be used from the docs alone.** A developer must be able to run it, configure it, check it and fix it without reading the code: new commands and settings go into [OPERATIONS.md](OPERATIONS.md), new topics, tables and columns into [DATA_MODEL.md](DATA_MODEL.md), changes to CI or the review flow into [CI.md](CI.md), and every known way it fails into the troubleshooting table. [docs/README.md](README.md) shows where each kind of document belongs.
 
 ## 8. What is enforced automatically
 
