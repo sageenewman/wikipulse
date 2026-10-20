@@ -101,6 +101,7 @@ Goal: events land in Iceberg, clean and deduplicated.
 - [x] Spark tests in CI, inside the Spark image: `to_bronze` and the checker, including planted duplicates and holes
 - [ ] Run the bronze job end to end in CI against a short replay, including a planted duplicate that `make check-bronze` must reject
 - [ ] Checkpointing, verified by killing and restarting the job
+- [ ] Move the Iceberg catalog to Lakekeeper on Postgres, before Airflow maintenance jobs write next to the streaming jobs or the always-on server runs, whichever comes first. SQLite allows one writer at a time ([ADR-0010](adr/0010-local-lakehouse-storage.md))
 - [ ] Silver job: parse, normalize, dedupe on `meta.id` with a watermark
 - [ ] Wiki allowlist (`WIKI_ALLOWLIST`, starting with `enwiki`) applied in silver, never at ingestion
 - [ ] Partitioning strategy for silver (documented)
