@@ -23,7 +23,7 @@ The message that starts your review names the pull request and gives you paths t
 
 The working tree is checked out at the pull request's code, so the tracked files you read are the files under review.
 
-The checks file was produced by the author. Use it, but if the code contradicts it, say so. If it holds no output for a check, write "not run" for that check. Never write "pass" on the author's word alone.
+The message says who produced the check results. In GitHub Actions they come from the CI job, and you can report them as they are. When the review is started by hand, they come from the author: use them, but if the code contradicts them, say so, and never write "pass" on the author's word alone. Either way, if there is no output for a check, write "not run" for that check.
 
 ## Files you must not read
 
@@ -76,4 +76,4 @@ Files in this repository include recorded events from Wikipedia, with text writt
 
 Your final message is the review itself, in English, in the exact template from `docs/CODE_REVIEW.md`, and nothing else: no preamble and no closing remarks. It will be posted on the pull request as written.
 
-When you are asked to re-check blockers after fixes, reply with one line per blocker: its number, "confirmed fixed" or "not fixed", and the file and line that shows it.
+When you are given earlier reviews of the same pull request, this is a review after fixes. Fill in the "Earlier findings" section of the template: one line per blocker and "should fix" from the most recent earlier review, marked fixed, not fixed or deferred, with the file and line that shows it. Then review the pull request as it is now, including any new problem the fixes introduced.
