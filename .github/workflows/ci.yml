@@ -5,7 +5,7 @@ name: CI
 
 on:
   pull_request:
-    # "labeled" lets the owner run a review again without a push: add the "review" label.
+    # "labeled" is how a review after the first one is requested: add the "review" label.
     types: [opened, synchronize, reopened, ready_for_review, labeled]
   push:
     branches: [main]
@@ -142,22 +142,25 @@ jobs:
   review:
     name: Code review
     needs: checks
-    # Runs when a PR opens, on every push to it, when it leaves draft, or when it gets
-    # the "review" label. Each review uses the owner's Claude subscription.
+    # Runs once by itself, when a PR opens or leaves draft. Any later review, for example
+    # after fixes, is requested by adding the "review" label. Pushes do not start a review:
+    # each review uses the owner's Claude subscription.
     # PRs from forks are skipped: GitHub does not give them the token.
     if: >-
       !cancelled()
       && github.event_name == 'pull_request'
       && github.event.pull_request.head.repo.full_name == github.repository
       && !github.event.pull_request.draft
-      && (github.event.action != 'labeled' || github.event.label.name == 'review')
+      && (github.event.action == 'opened'
+        || github.event.action == 'ready_for_review'
+        || (github.event.action == 'labeled' && github.event.label.name == 'review'))
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: read
       pull-requests: write
     concurrency:
-      # A review of an older commit is out of date once a new one is pushed.
+      # A newer review request for the same PR replaces one that is still running.
       group: review-${{ github.event.pull_request.number }}
       cancel-in-progress: true
     env:
@@ -249,3 +252,11 @@ jobs:
             echo "<sub>Automated review of commit ${HEAD_SHA:0:7} · [workflow run]($RUN_URL)</sub>"
           } >> .review-input/review.md
           gh pr comment "$PR_NUMBER" --body-file .review-input/review.md
+
+      # GitHub sends no event for a label that is already on the PR, so the label is
+      # removed after each review. To request the next one, add it again.
+      - name: Remove the review label
+        if: ${{ always() && github.event.action == 'labeled' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X DELETE "repos/${{ github.repository }}/issues/$PR_NUMBER/labels/review" --silent

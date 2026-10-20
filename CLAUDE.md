@@ -100,7 +100,7 @@ Details: [docs/DATA_SOURCE.md](docs/DATA_SOURCE.md).
 Reviews follow [docs/CODE_REVIEW.md](docs/CODE_REVIEW.md). Write code expecting an independent review.
 
 1. Claude opens the PR with a description that answers the four questions above.
-2. The reviewer agent ([.claude/agents/code-reviewer.md](.claude/agents/code-reviewer.md)) examines it and only writes findings. It is read-only and never changes code. CI starts it when the PR opens and on every push to it, and posts the review on the PR ([ADR-0009](docs/adr/0009-ci-and-automated-review.md)). The `review` label runs it again without a push.
+2. The reviewer agent ([.claude/agents/code-reviewer.md](.claude/agents/code-reviewer.md)) examines it and only writes findings. It is read-only and never changes code. CI starts it when the PR opens and posts the review on the PR ([ADR-0009](docs/adr/0009-ci-and-automated-review.md)). Pushes do not start a review: after fixes, add the `review` label to request the next one.
 3. Claude fixes, and posts a "changes after review" summary using the template in CODE_REVIEW.md.
 4. The owner alone approves the merge, after seeing both summaries.
 

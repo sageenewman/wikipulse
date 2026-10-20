@@ -91,7 +91,7 @@ Goal: the code meets [ENGINEERING.md](ENGINEERING.md), and the checks run by the
 - [ ] Split the recorder: stop policy, part writing and merging
 - [ ] Integration tests against a real broker for `resume.py` and `check_gaps.py`
 - [ ] Decide what happens when a delivery to Kafka fails for good (today it is only counted and logged)
-- [x] Automated reviewer that applies [CODE_REVIEW.md](CODE_REVIEW.md) to every PR: the reviewer agent runs in CI on every push to a PR ([ADR-0009](adr/0009-ci-and-automated-review.md))
+- [x] Automated reviewer that applies [CODE_REVIEW.md](CODE_REVIEW.md) to every PR: the reviewer agent runs in CI when a PR opens, and again on request with the `review` label ([ADR-0009](adr/0009-ci-and-automated-review.md))
 
 ## Phase 2: Lakehouse (bronze & silver)
 Goal: events land in Iceberg, clean and deduplicated.

@@ -108,7 +108,7 @@ These follow from [ADR-0006](adr/0006-data-scope-and-retention.md), [ADR-0007](a
 | Formatting and lint | `ruff` (`make lint`) | Runs on every PR |
 | Static types, strict | `mypy` (`make typecheck`) | Runs on every PR |
 | Tests pass | `pytest` (`make test`) | Runs on every PR |
-| Code review following [CODE_REVIEW.md](CODE_REVIEW.md) | Reviewer agent in GitHub Actions | Runs on every PR |
+| Code review following [CODE_REVIEW.md](CODE_REVIEW.md) | Reviewer agent in GitHub Actions | Runs when a PR opens; again on request |
 | Function complexity and length limits | `ruff` | Planned |
 | Test coverage of at least 85% | `pytest-cov` | Planned |
 

@@ -46,7 +46,7 @@ The full rules are in [docs/ENGINEERING.md](docs/ENGINEERING.md). In short:
 
 Every PR is reviewed before it is merged, following [docs/CODE_REVIEW.md](docs/CODE_REVIEW.md):
 
-1. The reviewer examines the change and reports findings. The reviewer never changes code. For pull requests from this repository, a reviewer agent runs in CI when the PR opens and on every push to it, and posts its review; the `review` label runs it again without a push. Pull requests from forks are reviewed by hand.
+1. The reviewer examines the change and reports findings. The reviewer never changes code. For pull requests from this repository, a reviewer agent runs in CI when the PR opens and posts its review; after fixes, add the `review` label to request the next review. Pull requests from forks are reviewed by hand.
 2. The author answers every finding and posts a summary of the changes made after the review.
 3. The repository owner approves the merge, after reading the PR description and that summary.
 

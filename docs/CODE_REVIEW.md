@@ -30,7 +30,7 @@ The reviewer is independent of the author:
 
 ## How a review is started
 
-The [CI workflow](../.github/workflows/ci.yml) starts the reviewer agent when a pull request is opened, on every push to it, and when it leaves draft, and posts the review on the pull request ([ADR-0009](adr/0009-ci-and-automated-review.md)). A review after fixes is given the earlier reviews and starts with an **Earlier findings** section. To run a review again without a push, add the `review` label (remove it first if it is already there).
+The [CI workflow](../.github/workflows/ci.yml) starts the reviewer agent once, when a pull request is opened or leaves draft, and posts the review on the pull request ([ADR-0009](adr/0009-ci-and-automated-review.md)). Pushes do not start a review. To request the next review, for example after the fixes, add the `review` label; the workflow removes it when the review is done. A review after fixes is given the earlier reviews and starts with an **Earlier findings** section.
 
 ## What to check
 
