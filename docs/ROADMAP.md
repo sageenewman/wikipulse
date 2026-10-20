@@ -82,6 +82,7 @@ Goal: the code meets [ENGINEERING.md](ENGINEERING.md), and the checks run by the
 - [x] Code review guide ([CODE_REVIEW.md](CODE_REVIEW.md))
 - [x] GitHub Actions CI on every PR: lint, type-check, tests
 - [ ] Make the CI checks required before merging (branch protection on `main`)
+- [ ] Give the reviewer the results of every CI job (lakehouse, Spark tests), not only lint, types and tests (review of #14)
 - [ ] Move the CI result parsing (summary table, annotations) from inline bash into a tested script under `scripts/`. Its failure paths have not run yet (review of #9)
 - [ ] Complexity and function-length limits in `ruff`
 - [ ] Test coverage measured, with a minimum of 85% in CI
@@ -99,7 +100,7 @@ Goal: events land in Iceberg, clean and deduplicated.
 - [x] Object storage (RustFS, replacing MinIO) + Iceberg REST catalog in docker-compose ([ADR-0010](adr/0010-local-lakehouse-storage.md))
 - [x] Spark Structured Streaming job: `wiki.raw` → `bronze.recentchange` (append, raw), with `make check-bronze` ([ADR-0011](adr/0011-spark-bronze-job.md))
 - [x] Spark tests in CI, inside the Spark image: `to_bronze` and the checker, including planted duplicates and holes
-- [ ] Run the bronze job end to end in CI against a short replay, including a planted duplicate that `make check-bronze` must reject
+- [ ] Run the bronze job end to end in CI against a short replay, with no storage credentials (so it proves remote signing through the catalog), including a planted duplicate that `make check-bronze` must reject
 - [x] Iceberg catalog on Postgres (Lakekeeper) with remote signing, after SQLite failed a commit under concurrent requests ([ADR-0012](adr/0012-lakekeeper-catalog.md))
 - [ ] Checkpointing, verified by killing and restarting the job
 - [ ] Silver job: parse, normalize, dedupe on `meta.id` with a watermark

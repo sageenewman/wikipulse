@@ -36,4 +36,5 @@ Two SQLite settings, `journal_mode=WAL` and `busy_timeout`, made the failure rar
 - ⚠️ Lakekeeper deletes a purged table's files in a background task, not during the drop.
 - ⚠️ DuckDB does not support remote signing. Reading the tables from DuckDB needs its own read credentials (`client-managed`).
 - ⚠️ More moving parts: three services instead of one, and a setup script.
-- ⚠️ The tables of the previous catalog were not migrated. The lakehouse volumes were deleted together, and the bronze jobs read the topics again from the start.
+- ⚠️ The tables of the previous catalog were not migrated. An existing environment must run `make clean` before switching: the lakehouse volumes go together, and the bronze jobs read the topics again from the start. A Spark checkpoint kept from before would make a job skip every message it had already read into the old catalog.
+- ⚠️ The storage key is stored in the catalog, encrypted, when the warehouse is created. Changing the storage key or the encryption key afterwards breaks every table read and write until the warehouse is recreated or its credential updated.
