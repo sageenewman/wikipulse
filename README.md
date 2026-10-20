@@ -52,6 +52,12 @@ make lakehouse        # start them and create the bucket
 make check-lakehouse  # create a test table and check its files reach storage
 # storage web console: http://localhost:9001/rustfs/console/
 
+# bronze: Spark copies every message of a topic into an Iceberg table
+make bronze                          # wiki.raw into lakehouse.bronze.recentchange
+make bronze JOB=bronze-replay        # wiki.replay into lakehouse.bronze_replay.recentchange
+make check-bronze JOB=bronze-replay  # compare the table with its topic: missing or duplicated messages
+# Spark UI: http://localhost:4040 (live job), http://localhost:4041 (replay job)
+
 make test    # run the tests
 make down    # stop everything
 ```

@@ -116,6 +116,7 @@ Run inside the codespace. `make help` lists them all.
 | `make topics` | Create the Kafka topics if they do not exist |
 | `make lakehouse` | Start object storage (RustFS) and the Iceberg catalog, and create the buckets |
 | `make check-lakehouse` | Create a test table through the catalog and check its files reach storage |
+| `make bronze` / `make check-bronze` | Start the bronze Spark job (`JOB=bronze-replay` for replays) / compare its table with its topic |
 | `make ingest` | Run the live producer: Wikimedia stream to Kafka |
 | `make record` / `make replay` | Save the stream to a file / publish a recording to the replay topics |
 | `make check-gaps` | Check a topic for lost or duplicated events (the live raw topic by default) |

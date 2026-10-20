@@ -1,8 +1,11 @@
 .DEFAULT_GOAL := help
-.PHONY: help up down ps logs clean topics lakehouse buckets check-lakehouse ingest record replay check-gaps sync lint fmt typecheck test
+.PHONY: help up down ps logs clean topics lakehouse buckets check-lakehouse bronze check-bronze ingest record replay check-gaps sync lint fmt typecheck test
 
 # Every profile, so that down and clean also stop the optional services.
-ALL_PROFILES := --profile lakehouse
+ALL_PROFILES := --profile lakehouse --profile streaming
+
+# The bronze job to start or check: bronze (live, wiki.raw) or bronze-replay (wiki.replay).
+JOB ?= bronze
 
 help: ## Show this help
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | sed -E 's/:.*## /  -  /'
@@ -35,6 +38,12 @@ buckets: ## Create the object storage buckets if they do not exist
 
 check-lakehouse: ## Create a test table through the catalog and check its files reach storage
 	docker compose exec -T object-store sh -s < scripts/check-lakehouse.sh
+
+bronze: lakehouse ## Start a bronze job (Kafka to Iceberg): make bronze, or make bronze JOB=bronze-replay
+	docker compose $(ALL_PROFILES) up -d --build $(JOB)
+
+check-bronze: ## Check a bronze table against its topic for missing or duplicated messages: make check-bronze JOB=bronze-replay
+	docker compose $(ALL_PROFILES) run --rm --no-deps $(JOB) streaming/check_bronze.py
 
 ingest: ## Run the ingestion service (Ctrl+C to stop)
 	uv run python -m ingestion
