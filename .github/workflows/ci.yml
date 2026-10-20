@@ -194,33 +194,26 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # The workflow's own token: it can only read the code and comment on PRs.
           github_token: ${{ github.token }}
-          # Shows Claude's steps on the run's summary page, to see why a review went wrong.
-          # Safe here: only this repository's PRs run it, and Claude cannot reach secrets.
-          display_report: true
-          # Claude can read and write files only. The next step posts the review.
+          # The session runs as the reviewer agent itself, and only the read-only tools
+          # exist in it: no shell, no file writes, no subagents. Its final message is
+          # the review, and the next steps post it.
           claude_args: >-
-            --max-turns 15
-            --allowedTools "Agent,Read,Write"
+            --agent code-reviewer
+            --tools "Read,Grep,Glob"
+            --allowedTools "Read,Grep,Glob"
+            --max-turns 80
           prompt: |
-            You run the automated code review for pull request #${{ env.PR_NUMBER }} in ${{ github.repository }}.
+            Review pull request #${{ env.PR_NUMBER }} in ${{ github.repository }}.
             The pull request's code is checked out in the working directory.
 
-            1. Use the code-reviewer subagent to review it. Give it the pull request number and these paths:
-               - the diff: .review-input/diff.patch
-               - the pull request description: .review-input/description.md
-               - the check results: .review-input/checks/ (summary.txt holds the outcome of each check).
-                 They were produced by the CI job of this workflow, not by the author.
-                 If the folder is missing, the checks did not run.
-               - earlier reviews of this pull request and the author's replies: .review-input/earlier-reviews.md
-                 If it is not empty, this is a review after fixes. Tell the subagent to add a section
-                 "### Earlier findings" right after the summary: one line per blocker and "should fix"
-                 from the most recent earlier review, each marked "fixed", "not fixed" or "deferred",
-                 with the file and line that shows it. The rest of the review covers the pull request
-                 as it is now, including any new problem that the fixes introduced.
-            2. Write the subagent's final message, exactly as it returned it, to .review-input/review.md.
-
-            Do not review the code yourself; the subagent is the reviewer. Do not change any other file.
-            If the subagent fails, write one line to .review-input/review.md saying that the automated review failed.
+            - The diff: .review-input/diff.patch
+            - The pull request description: .review-input/description.md
+            - The check results: .review-input/checks/ (summary.txt holds the outcome of each check).
+              They were produced by the CI job of this workflow, not by the author.
+              If the folder is missing, the checks did not run.
+            - Earlier reviews of this pull request and the author's replies: .review-input/earlier-reviews.md
+              If it is not empty, this is a review after fixes: fill in the "Earlier findings" section
+              from the most recent earlier review.
 
       - name: Save the review session
         if: ${{ !cancelled() && steps.review.outputs.execution_file != '' }}
@@ -235,9 +228,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SESSION: ${{ steps.review.outputs.execution_file }}
         run: |
+          # The review is the final message of a session that ended normally.
+          outcome=$(jq -r '[.[] | select(.type == "result")] | last | .subtype // "none"' "$SESSION" 2>/dev/null || echo none)
+          if [ "$outcome" = success ]; then
+            jq -r '[.[] | select(.type == "result")] | last | .result // ""' "$SESSION" > .review-input/review.md
+          fi
           if [ ! -s .review-input/review.md ]; then
-            echo "The automated review did not produce a review." > .review-input/review.md
+            echo "The automated review failed (session result: $outcome). Add the \`review\` label to run it again." \
+              > .review-input/review.md
           fi
           {
             echo
