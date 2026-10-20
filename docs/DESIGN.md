@@ -48,7 +48,7 @@ When something happens in the world (an earthquake, a celebrity death, an electi
  └─────────┬────────────────────┘
            ▼
  ┌──────────────────────────────┐
- │ Iceberg Lakehouse (S3/MinIO) │  bronze → silver → gold
+ │ Iceberg Lakehouse (S3/RustFS)│  bronze → silver → gold
  └─────────┬────────────────────┘
            ▼
  ┌──────────────┐     ┌────────────────────┐
@@ -106,6 +106,7 @@ Detailed reasoning lives in [ADRs](adr/).
 | Broker | **Redpanda** | Kafka, Pulsar | Kafka API, single binary, about 1/3 the memory, built-in Schema Registry. Swappable for MSK/Confluent. [ADR-0001](adr/0001-redpanda-as-kafka-broker.md) |
 | Stream processing | **Spark Structured Streaming** | Flink, Kafka Streams | One engine for streaming, batch backfills and table maintenance, with native Iceberg support and a large ecosystem. Latency needs are seconds, not milliseconds. [ADR-0002](adr/0002-spark-structured-streaming.md) |
 | Table format | **Apache Iceberg** | Delta Lake, raw Parquet | Engine-neutral (Spark, DuckDB, Athena, Trino), ACID, time travel, schema evolution, native AWS support. [ADR-0003](adr/0003-iceberg-table-format.md) |
+| Local lakehouse | **RustFS** + Iceberg reference REST catalog | MinIO (no longer open source), SeaweedFS, Lakekeeper, Nessie | The pair Iceberg uses in its own quickstarts and tests. Replaced by S3 + Glue in the cloud. [ADR-0010](adr/0010-local-lakehouse-storage.md) |
 | Transformations | **dbt** + DuckDB | Hand-written SQL | Industry standard. Tests and docs built in. The same models run on Athena in the cloud. |
 | Orchestration | **Airflow** | Dagster, Prefect | The most widely adopted orchestrator. Runs in a lightweight standalone mode. |
 | Dashboard | **Streamlit** + **Grafana** | Superset, Metabase | Streamlit is pure Python and fast to build. Grafana is the ops standard. |
@@ -125,7 +126,7 @@ Detailed reasoning lives in [ADRs](adr/).
 | 4 | **Schema evolution** | Event types have different fields, and Wikimedia schemas change. | Schema Registry compatibility rules, Iceberg schema evolution, DLQ for invalid events. |
 | 5 | **Bot noise** | Bots, mostly on Wikidata, dominate volume and mask human activity. | Keep everything in bronze. Filter and segment in silver and gold. Measure the impact. |
 | 6 | **Defining a spike** | Some pages are always busy, and new pages have no baseline. | v1: z-score vs. a rolling baseline with a minimum-activity threshold. Validate against known events. |
-| 7 | **Resource limits** | Redpanda + Spark + Airflow + MinIO is tight on 16GB. | Compose profiles and per-container memory limits. |
+| 7 | **Resource limits** | Redpanda + Spark + Airflow + object storage is tight on 16GB. | Compose profiles and per-container memory limits. |
 | 8 | **Testing streaming code** | You can't assert against a live stream. | Record real events to files and replay them deterministically. Pure functions get unit tests, and Testcontainers covers integration. |
 | 9 | **Cloud cost** | One forgotten service can be expensive. | Budget alerts, no MSK/EMR/NAT, `terraform destroy` after demos. |
 | 10 | **Codespaces quota** | About 30 hours/month on a 4-core machine. | Auto-stop, and move 24/7 runtime to Oracle early. |
@@ -174,6 +175,5 @@ See [ROADMAP.md](ROADMAP.md) for the detailed breakdown.
 ## 9. Open questions
 
 - Avro or JSON Schema for the Schema Registry?
-- Which Iceberg REST catalog to use locally (Lakekeeper, Nessie, or the reference implementation)?
 - Silver partitioning: by `day` only, or by `day` + `wiki`?
 - Streamlit reads from Iceberg via DuckDB, or from a small serving table?

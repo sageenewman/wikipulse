@@ -46,6 +46,12 @@ make check-gaps TOPIC=wiki.replay  # verify the replayed copy
 
 # record a past window (Wikimedia keeps about 7 days)
 make record OUT=data/recordings/event.jsonl.gz ARGS="--from 2026-09-30T09:00:00Z --to 2026-10-01T00:00:00Z"
+
+# the lakehouse: object storage (RustFS) and the Iceberg catalog
+make lakehouse        # start them and create the bucket
+make check-lakehouse  # create a test table and check its files reach storage
+# storage web console: http://localhost:9001/rustfs/console/
+
 make test    # run the tests
 make down    # stop everything
 ```

@@ -2,7 +2,7 @@
 
 Status: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` dropped (say why)
 
-**Current phase:** Phase 1: Ingestion
+**Current phase:** Phase 2: Lakehouse (the remaining Phase 1 items continue alongside)
 **MVP:** end of Phase 3.
 
 ---
@@ -96,7 +96,7 @@ Goal: the code meets [ENGINEERING.md](ENGINEERING.md), and the checks run by the
 ## Phase 2: Lakehouse (bronze & silver)
 Goal: events land in Iceberg, clean and deduplicated.
 
-- [ ] MinIO (S3-compatible) + Iceberg REST catalog in docker-compose
+- [x] Object storage (RustFS, replacing MinIO) + Iceberg REST catalog in docker-compose ([ADR-0010](adr/0010-local-lakehouse-storage.md))
 - [ ] Spark Structured Streaming job: `wiki.raw` → `bronze.recentchange` (append, raw)
 - [ ] Checkpointing, verified by killing and restarting the job
 - [ ] Silver job: parse, normalize, dedupe on `meta.id` with a watermark

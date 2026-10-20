@@ -31,7 +31,7 @@ This repository is built with Claude Code under the direction of the repository 
 ## Hard constraints
 
 - **Do not run the heavy stack on a laptop.** Development happens in **GitHub Codespaces**, see [ADR-0004](docs/adr/0004-codespaces-dev-environment.md).
-- **Memory is tight** for Redpanda + Spark + Airflow + MinIO. Every container in docker-compose must have a memory limit. Use compose **profiles** so only the needed services run.
+- **Memory is tight** for Redpanda + Spark + Airflow + object storage. Every container in docker-compose must have a memory limit. Use compose **profiles** so only the needed services run.
 - **AWS costs must stay near zero.** Use only S3, Glue Data Catalog and Athena (pay-per-use). **Never** provision MSK, EMR, NAT Gateways, or always-on EC2 without asking first. Budget alerts must exist before any `terraform apply`. Run `terraform destroy` after demo sessions. See [ADR-0005](docs/adr/0005-cloud-cost-strategy.md).
 - **No secrets in the repo.** Use `.env` (gitignored) and `.env.example`.
 
@@ -39,7 +39,7 @@ This repository is built with Claude Code under the direction of the repository 
 
 ```
 Wikimedia SSE → Python producer → Redpanda (Kafka API, Schema Registry)
-  → Spark Structured Streaming → Iceberg on S3/MinIO (bronze → silver → gold)
+  → Spark Structured Streaming → Iceberg on S3/RustFS (bronze → silver → gold)
   → dbt + DuckDB → Streamlit dashboard
 Airflow: dbt runs, Iceberg maintenance, backfills
 Prometheus + Grafana: lag, throughput, latency, DLQ
@@ -114,6 +114,8 @@ Run inside the codespace. `make help` lists them all.
 | `make ps` / `make logs` | Service status / logs |
 | `make clean` | Stop and delete data volumes |
 | `make topics` | Create the Kafka topics if they do not exist |
+| `make lakehouse` | Start object storage (RustFS) and the Iceberg catalog, and create the buckets |
+| `make check-lakehouse` | Create a test table through the catalog and check its files reach storage |
 | `make ingest` | Run the live producer: Wikimedia stream to Kafka |
 | `make record` / `make replay` | Save the stream to a file / publish a recording to the replay topics |
 | `make check-gaps` | Check a topic for lost or duplicated events (the live raw topic by default) |

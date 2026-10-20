@@ -1,6 +1,6 @@
 # ADR-0003: Apache Iceberg as the table format
 
-- **Status:** Accepted
+- **Status:** Accepted. The local object store is amended by [ADR-0010](0010-local-lakehouse-storage.md): RustFS instead of MinIO, which is no longer available as open source.
 - **Date:** 2026-10-02
 
 ## Context

@@ -55,5 +55,56 @@ services:
         condition: service_healthy
     mem_limit: 256m
 
+  # --- Lakehouse (profile "lakehouse"): object storage + Iceberg catalog -----------------
+  # Same pair as Apache Iceberg's own quickstarts and tests. See docs/adr/0010-local-lakehouse-storage.md
+
+  # S3-compatible object storage. Holds the table files: Parquet data and Iceberg metadata.
+  object-store:
+    image: rustfs/rustfs:1.0.3
+    profiles: [lakehouse]
+    environment:
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY_ID:-wikipulse}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_ACCESS_KEY:-wikipulse-dev-secret}
+      RUSTFS_OBS_LOG_STDOUT_ENABLED: "true"
+    ports:
+      - "9000:9000" # S3 API
+      - "9001:9001" # Web console at /rustfs/console/
+    volumes:
+      - object-store-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:9000/health/ready"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    mem_limit: 512m
+
+  # Iceberg REST catalog (the Iceberg project's reference implementation). It records which
+  # tables exist and where each table's current metadata file is. Committing a write to a
+  # table means swapping that pointer, which is what makes Iceberg writes atomic.
+  iceberg-rest:
+    image: apache/iceberg-rest-fixture:1.10.1
+    profiles: [lakehouse]
+    environment:
+      # The catalog's own state goes to a SQLite file on a volume. The image default is /tmp,
+      # which is lost when the container is recreated, while the data files would remain.
+      CATALOG_URI: jdbc:sqlite:/home/iceberg/iceberg_catalog.db
+      CATALOG_WAREHOUSE: s3://warehouse/
+      CATALOG_IO__IMPL: org.apache.iceberg.aws.s3.S3FileIO
+      CATALOG_S3_ENDPOINT: http://object-store:9000
+      CATALOG_S3_PATH__STYLE__ACCESS: "true"
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-wikipulse}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-wikipulse-dev-secret}
+      AWS_REGION: us-east-1
+    ports:
+      - "8181:8181" # Iceberg REST API
+    volumes:
+      - iceberg-catalog:/home/iceberg
+    depends_on:
+      object-store:
+        condition: service_healthy
+    mem_limit: 512m
+
 volumes:
   redpanda-data:
+  object-store-data:
+  iceberg-catalog:
