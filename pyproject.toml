@@ -26,7 +26,7 @@ package = false
 line-length = 100
 target-version = "py312"
 # The streaming jobs run on the Spark image's Python 3.10 (streaming/Dockerfile).
-per-file-target-version = { "streaming/**/*.py" = "py310" }
+per-file-target-version = { "streaming/**/*.py" = "py310", "tests/spark/**/*.py" = "py310" }
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]

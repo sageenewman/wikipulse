@@ -9,10 +9,11 @@ Phase 2 starts writing the stream into the lakehouse. The first job copies every
 The roadmap had planned to install Java and Spark in the dev container and to move to a 4-core machine for Spark.
 
 ## Decision
-- **Spark runs in its own container**, built from the official `apache/spark:4.1.3-python3` image (`streaming/Dockerfile`), under the compose profile `streaming`. The same image runs in the codespace, in CI and on a server. The Kafka source and Iceberg connectors are resolved when the image is built, so a job starts without downloading anything. Spark runs in local mode with a 1GB heap and a 2GB container limit.
+- **Spark runs in its own container**, built from the official `apache/spark:4.1.3-python3` image (`streaming/Dockerfile`), under the compose profile `streaming`. The jobs run on it in the codespace, and CI builds it and runs the Spark tests in it (a `test` stage of the same Dockerfile). The plan is for a server to run the same image. The Kafka source and Iceberg connectors are resolved when the image is built, so a job starts without downloading anything. Spark runs in local mode with a 1GB heap and a 2GB container limit.
 - **Versions: Spark 4.1.3 with Iceberg 1.12.0.** Spark 4.2 is newer, but Iceberg has no runtime for it yet. The local catalog server is Iceberg 1.10.1; client and server talk through the REST protocol, which is stable across versions.
 - **Bronze rows are the Kafka messages as they arrived:** key and value as text (the producer writes UTF-8 JSON, [ADR-0007](0007-ingestion-message-contract.md)), topic, partition, offset, Kafka timestamp, headers, and the time the batch ran. Nothing is parsed or filtered.
-- **Partition and offset are kept**, so the table can be checked against its topic: `make check-bronze` reports missing and duplicated messages.
+- **Partition and offset are kept**, so the table can be checked against its topic: `make check-bronze` reports missing and duplicated messages. It reads the table at one pinned snapshot, taken before the topic is read, and computes every count in one query. So it can run while the job writes: a message newer than anything the table has in its partition is reported as not yet written, while a hole below that point is reported as missing.
+- **The tests that need Spark run inside the Spark image** (`make test-spark`, and a CI job). This also checks that `streaming/` runs on the image's Python 3.10.
 - **The table is partitioned by day** of the Kafka timestamp: bronze is read by time range and expired by day.
 - **One micro-batch per minute by default** (`BRONZE_TRIGGER_SECONDS`), with at most 100,000 messages per batch (`BRONZE_MAX_OFFSETS_PER_TRIGGER`).
 - **Each source has its own table.** Live data goes to `lakehouse.bronze.recentchange`, replays to `lakehouse.bronze_replay.recentchange` (the `bronze-replay` service). The settings refuse any topic other than `wiki.raw` for the live table, the same rule as [ADR-0008](0008-replay-topics.md).
@@ -34,6 +35,7 @@ The roadmap had planned to install Java and Spark in the dev container and to mo
 - ✅ Replayed data cannot reach the live table: the job refuses to start.
 - ⚠️ The image is 2.55GB, almost all of it the official Spark image.
 - ⚠️ The checkpoint and the table belong together. Deleting one without the other makes the job skip or repeat messages. `make clean` deletes both.
-- ⚠️ `to_bronze` has no unit test yet: testing it needs Spark, which only the image has. It is covered by the end-to-end check.
+- ✅ The checker is shown to fail: its tests plant a duplicate and a hole, and breaking the counting logic on purpose made them fail.
+- ⚠️ Every CI run downloads the 2.2GB Spark image to run the Spark tests, a few minutes per run.
 - ⚠️ Without PySpark in the project environment, mypy does not check calls into Spark.
 - ⚠️ Restart safety (killing the job and starting it again) is not verified yet; it is the next roadmap item.

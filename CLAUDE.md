@@ -122,3 +122,4 @@ Run inside the codespace. `make help` lists them all.
 | `make check-gaps` | Check a topic for lost or duplicated events (the live raw topic by default) |
 | `make sync` | Install Python dependencies with uv |
 | `make lint` / `make fmt` / `make typecheck` / `make test` | ruff / ruff format / mypy / pytest |
+| `make test-spark` | The tests that need Spark, inside the Spark image |

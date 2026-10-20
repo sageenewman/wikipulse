@@ -58,7 +58,8 @@ make bronze JOB=bronze-replay        # wiki.replay into lakehouse.bronze_replay.
 make check-bronze JOB=bronze-replay  # compare the table with its topic: missing or duplicated messages
 # Spark UI: http://localhost:4040 (live job), http://localhost:4041 (replay job)
 
-make test    # run the tests
+make test        # run the tests
+make test-spark  # run the tests that need Spark, inside the Spark image
 make down    # stop everything
 ```
 

@@ -168,6 +168,23 @@ jobs:
         if: ${{ always() }}
         run: make down
 
+  spark-tests:
+    name: Spark tests
+    # The tests that need Spark run inside the Spark image, on its Python 3.10, the same
+    # image and Python the streaming jobs run on (docs/adr/0011). This also catches code
+    # in streaming/ that uses features newer than Python 3.10.
+    if: github.event.action != 'labeled'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: spark-tests-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build the image and run the tests
+        run: make test-spark
+
   review:
     name: Code review
     needs: checks

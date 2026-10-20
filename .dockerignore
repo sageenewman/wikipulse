@@ -1,0 +1,8 @@
+# Image builds use the repository root as context (streaming/Dockerfile). Send only what
+# an image needs: never the recordings in data/, the virtual environment or .env.
+*
+!streaming/
+!tests/spark/
+**/__pycache__
+**/*.pyc
+streaming/Dockerfile

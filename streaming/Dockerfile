@@ -1,7 +1,8 @@
 # The image the streaming jobs run in: the official Spark image plus the connectors the
 # jobs need, resolved at build time so a job starts without downloading anything.
 # Decisions: docs/adr/0011-spark-bronze-job.md
-FROM apache/spark:4.1.3-python3@sha256:bf9d035a7c32a8ca46aa58d6348182ffd7d2dff6409206ecfbb3915ff1fef211
+# Built from the repository root; .dockerignore lets in only streaming/ and tests/spark/.
+FROM apache/spark:4.1.3-python3@sha256:bf9d035a7c32a8ca46aa58d6348182ffd7d2dff6409206ecfbb3915ff1fef211 AS runtime
 
 USER root
 
@@ -23,7 +24,7 @@ RUN python3 -m pip install --no-cache-dir "pydantic-settings==2.15.0"
 # Checkpoints live on a volume mounted here; it must belong to the user the job runs as.
 RUN mkdir -p /checkpoints && chown spark:spark /checkpoints
 
-COPY --chown=spark:spark . /opt/wikipulse/streaming
+COPY --chown=spark:spark streaming/ /opt/wikipulse/streaming/
 ENV PYTHONPATH=/opt/wikipulse
 
 USER spark
@@ -32,3 +33,22 @@ WORKDIR /opt/wikipulse
 # Spark in local mode: driver and executor in one JVM, one thread per core.
 ENTRYPOINT ["/opt/spark/bin/spark-submit", "--master", "local[*]", "--driver-memory", "1g"]
 CMD ["streaming/bronze.py"]
+
+
+# The tests that need Spark, run on the same image and the same Python as the jobs:
+# `make test-spark`. Not used by any service.
+FROM runtime AS test
+
+USER root
+# The same version as in uv.lock.
+RUN python3 -m pip install --no-cache-dir "pytest==9.1.1"
+# Plain python3 (not spark-submit) does not see Spark's Python package; a .pth file adds
+# it and its py4j bridge to the interpreter's path.
+RUN site=$(python3 -c "import site; print(site.getsitepackages()[0])") \
+    && mkdir -p "$site" \
+    && { echo /opt/spark/python; ls /opt/spark/python/lib/py4j-*.zip; } > "$site/spark.pth"
+COPY --chown=spark:spark tests/spark/ /opt/wikipulse/tests/spark/
+
+USER spark
+ENTRYPOINT ["python3", "-m", "pytest", "-p", "no:cacheprovider"]
+CMD ["-q", "tests/spark"]

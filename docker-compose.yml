@@ -110,7 +110,10 @@ services:
 
   # Bronze: every message of wiki.raw, appended unchanged to lakehouse.bronze.recentchange.
   bronze: &spark-job
-    build: ./streaming
+    build:
+      context: .
+      dockerfile: streaming/Dockerfile
+      target: runtime
     image: wikipulse-spark:dev
     profiles: [streaming]
     environment: &spark-env

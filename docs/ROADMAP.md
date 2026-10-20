@@ -98,7 +98,8 @@ Goal: events land in Iceberg, clean and deduplicated.
 
 - [x] Object storage (RustFS, replacing MinIO) + Iceberg REST catalog in docker-compose ([ADR-0010](adr/0010-local-lakehouse-storage.md))
 - [x] Spark Structured Streaming job: `wiki.raw` → `bronze.recentchange` (append, raw), with `make check-bronze` ([ADR-0011](adr/0011-spark-bronze-job.md))
-- [ ] Run the bronze job in CI against a short replay (needs the 2.5GB Spark image on the runner)
+- [x] Spark tests in CI, inside the Spark image: `to_bronze` and the checker, including planted duplicates and holes
+- [ ] Run the bronze job end to end in CI against a short replay, including a planted duplicate that `make check-bronze` must reject
 - [ ] Checkpointing, verified by killing and restarting the job
 - [ ] Silver job: parse, normalize, dedupe on `meta.id` with a watermark
 - [ ] Wiki allowlist (`WIKI_ALLOWLIST`, starting with `enwiki`) applied in silver, never at ingestion
