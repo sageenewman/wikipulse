@@ -289,7 +289,12 @@ jobs:
             sed -n '/^## Review of/,$p' .review-input/review.md > .review-input/review.tmp
             mv .review-input/review.tmp .review-input/review.md
           else
+            # Said on the PR itself as well as in the run log, which nobody opens for a green job.
             echo "::warning::The review has no '## Review of' heading, so a later review will not find it."
+            {
+              echo
+              echo "> ⚠️ This review has no \`## Review of\` heading, so a later review will not see it."
+            } >> .review-input/review.md
           fi
           {
             echo
